@@ -11,7 +11,7 @@ export default function Button({ variant, children, onClick, className, disabled
     function getStyle() {
         switch (variant) {
             case "primary":
-                return "text-text bg-primary border-transparent enabled:active:bg-primary-dark enabled:hover:bg-primary-dark";
+                return "text-text bg-primary border-transparent enabled:active:bg-primary-dark";
             case "secondary":
                 return "text-secondary border-secondary enabled:active:bg-primary-dark enabled:active:text-text enabled:active:border-transparent enabled:hover:bg-primary enabled:hover:border-transparent enabled:hover:text-text";
             case "destructive":

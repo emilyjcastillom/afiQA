@@ -1,34 +1,54 @@
 import Button from "../components/ui/Button";
-import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import CarouselCard from "../components/ui/CarouselCard";
+import { useFanaticRiddles } from "../hooks/useFanatic";
 
 function Fanatic() {
+    const { riddles, loading, error } = useFanaticRiddles();
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <p className="text-xl font-anton animate-pulse">Loading clues...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen p-6">
+                <p className="text-xl text-red-500 font-anton text-center">
+                    Oops! Something went wrong fetching the clues.
+                </p>
+            </div>
+        );
+    }
+
+    const carouselItems = riddles
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(r => r.riddle);
+
     return (
-        <div className="p-10 space-y-10">
-            <div className="flex flex-col gap-4">
-                <Button variant="primary" onClick={() => { }}>Fanatic</Button>
-                <Button variant="primary" disabled={true} onClick={() => { }}>Fanatic</Button>
-                <Button variant="secondary" onClick={() => { }}>Fanatic</Button>
-                <Button variant="secondary" disabled={true} onClick={() => { }}>Fanatic</Button>
-                <Button variant="destructive" onClick={() => { }}>Fanatic</Button>
-                <Button variant="destructive" disabled={true} onClick={() => { }}>Fanatic</Button>
-                <Button variant="success" onClick={() => { }}>Fanatic</Button>
+        <div className="flex flex-col gap-4 min-h-screen p-6 max-w-2xl mx-auto items-center">
+            {/* Carousel */}
+            <div className="flex-1 flex items-center justify-center w-full">
+                <CarouselCard items={carouselItems.length > 0 ? carouselItems : ["No clues available."]} />
             </div>
 
-            <Card>
-                <Button variant="success" disabled={true} onClick={() => { }}>Fanatic</Button>
-                <Input placeholder="Fanatic" />
-            </Card>
+            {/* Guess Section */}
+            <div className="w-full flex flex-col gap-4 pb-4">
+                <Input 
+                    placeholder="Your guess here!"
+                />
 
-            <CarouselCard items={[
-                "I signed a four-year, $44 million extension that later became one of the most team-friendly contracts in NBA history due to league revenue spikes.",
-                "Curry was also the first player in NBA history to be elected MVP by a unanimous vote.",
-                "He led the Golden State Warriors to three NBA championships and won two NBA Most Valuable Player Awards.",
-                "He is widely regarded as one of the greatest basketball players of all time and as the greatest shooter in NBA history.",
-                "Wait until you see how this carousel works with five different facts about Stephen Curry!"
-            ]} />
-            
+                <Button 
+                    variant="secondary"
+                    className="font-anton text-2xl py-3"
+                    onClick={() => {}}
+                >
+                    Guess!
+                </Button>
+            </div>
         </div>
     );
 }
