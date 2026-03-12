@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getRiddles } from "../lib/fanaticApi";
+import { getRiddles, submitAnswer } from "../lib/fanaticApi";
 type Riddle = {
   sort_order: number;
   riddle: string;
@@ -41,5 +41,34 @@ export function useFanaticRiddles() {
     loading,
     error,
     refreshRiddles: fetchRiddles,
+  };
+}
+
+export function useSubmitFanaticAnswer() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const answer = async (answer: string) => {
+    try {
+      setLoading(true);
+
+      const data = await submitAnswer(answer);
+
+      setError(null);
+      return data;
+    } catch (err) {
+      console.error("Error in useSubmitAnswer hook:", err);
+      setError(
+        err instanceof Error ? err : new Error("Failed to submit answer"),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
+    error,
+    answer,
   };
 }

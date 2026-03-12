@@ -1,11 +1,25 @@
+import { useState } from "react";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import CarouselCard from "../components/ui/CarouselCard";
-import { useFanaticRiddles } from "../hooks/useFanatic";
+import Dialog from "../components/ui/Dialog";
+import { useFanaticRiddles, useSubmitFanaticAnswer } from "../hooks/useFanatic";
 
 function Fanatic() {
     const { riddles, loading, error } = useFanaticRiddles();
+    const { answer, loading: submitting, error: submitError } = useSubmitFanaticAnswer();
 
+    const [guess, setGuess] = useState("");
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [submitResult, setSubmitResult] = useState<any>(null);
+
+    const handleGuess = async () => {
+        if (!guess.trim()) return;
+        const result = await answer(guess);
+        setSubmitResult(result);
+        setDialogOpen(true);
+    };
+    
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -39,16 +53,42 @@ function Fanatic() {
             <div className="w-full flex flex-col gap-4 pb-4">
                 <Input 
                     placeholder="Your guess here!"
+                    value={guess}
+                    onChange={(e) => setGuess(e.target.value)}
                 />
 
                 <Button 
                     variant="secondary"
                     className="font-anton text-2xl py-3"
-                    onClick={() => {}}
+                    onClick={handleGuess}
+                    disabled={submitting}
                 >
-                    Guess!
+                    {submitting ? "Submitting..." : "Guess!"}
                 </Button>
             </div>
+
+            {/* Result Dialog */}
+            <Dialog isOpen={dialogOpen}>
+                <div className="flex flex-col gap-4 text-center items-center">
+                    <h2 className={`text-3xl font-anton ${submitError ? 'text-red-500' : submitResult?.correct ? 'text-green-500' : 'text-primary'}`}>
+                        {submitError ? "Error" : submitResult?.message || "Result"}
+                    </h2>
+                    <p className="font-lato text-lg">
+                        {submitError 
+                            ? submitError.message 
+                            : submitResult 
+                                ? JSON.stringify(submitResult) 
+                                : "No result"}
+                    </p>
+                    <Button 
+                        variant="primary" 
+                        onClick={() => setDialogOpen(false)}
+                        className="w-full mt-2"
+                    >
+                        Close
+                    </Button>
+                </div>
+            </Dialog>
         </div>
     );
 }
