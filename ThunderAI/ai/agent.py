@@ -1,5 +1,6 @@
 import json
-from ai.ai_client import client
+from ai.ai_client import client as ai_client
+from sb.supabase_client import supabase
 from sb.functions import search_products, get_active_cart
 from ai.context import tools, system_prompt
 
@@ -9,8 +10,12 @@ def run_agent(user_message: str, jwt_token: str = None):
         {"role": "user", "content": user_message}
     ]
 
+    if jwt_token:
+        jwt_token = jwt_token.replace("Bearer ", "")
+        supabase.postgrest.auth(jwt_token)
+
     while True:
-        response = client.chat.completions.create(
+        response = ai_client.chat.completions.create(
             model="qwen-plus", 
             messages=messages, 
             tools=tools

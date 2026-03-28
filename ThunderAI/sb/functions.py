@@ -25,7 +25,7 @@ def _get_embedding(product: str):
 def get_active_cart(jwt_token: str):
     user_id = _get_user_id(jwt_token)
 
-    return (
+    data = (
         supabase.table("shopping_carts")
         .select(
             "id, "
@@ -42,11 +42,10 @@ def get_active_cart(jwt_token: str):
         .execute()
         .data
     )
+    return data
 
 def search_products(product: str):
-    print(product)
     embedding = _get_embedding(product)
-    print(embedding[0:10])
 
     top_products = supabase.rpc("get_top_products", 
             {
@@ -54,7 +53,6 @@ def search_products(product: str):
                 "top_n": 5
             }
         ).execute().data
-    print(top_products)
     return top_products
     
     
