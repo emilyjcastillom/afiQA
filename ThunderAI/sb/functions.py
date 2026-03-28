@@ -44,16 +44,17 @@ def get_active_cart(jwt_token: str):
     )
 
 def search_products(product: str):
+    print(product)
     embedding = _get_embedding(product)
-    return (
-        supabase.rpc("search_products", 
+    print(embedding[0:10])
+
+    top_products = supabase.rpc("get_top_products", 
             {
-                "pEmbedding": embedding,
-                "pTopN": 5
+                "query_embedding": embedding,
+                "top_n": 5
             }
-        )
-        .execute()
-        .data
-    )
+        ).execute().data
+    print(top_products)
+    return top_products
     
     
