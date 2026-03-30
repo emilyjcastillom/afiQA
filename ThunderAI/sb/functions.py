@@ -3,10 +3,6 @@ import requests
 from .supabase_client import supabase
 import os
 
-def _get_user_id(jwt_token: str):
-    token = jwt_token.replace("Bearer ", "")
-    user_id = jwt.decode(token, options={"verify_signature": False}).get("sub")
-    return user_id
 
 def _get_embedding(product: str):
     response = requests.post(
@@ -22,8 +18,11 @@ def _get_embedding(product: str):
     )
     return response.json()["data"][0]["embedding"]
 
-def get_active_cart(jwt_token: str):
-    user_id = _get_user_id(jwt_token)
+def get_active_cart():
+    if not (session := supabase.auth.get_session()):
+        raise PermissionError("Not authenticated")
+
+    user_id = session.user.id
 
     data = (
         supabase.table("shopping_carts")
@@ -55,4 +54,7 @@ def search_products(product: str):
         ).execute().data
     return top_products
     
-    
+def authenticate_user(jwt_token: str):
+    token = jwt_token.replace("Bearer ", "")
+    supabase.postgrest.auth(token)
+
