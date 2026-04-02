@@ -5,7 +5,8 @@ import Input from "../components/ui/Input";
 import CarouselCard from "../components/ui/CarouselCard";
 import Dialog from "../components/ui/Dialog";
 import { 
-    useFanaticRiddles, 
+    useFanaticGame, 
+    useFanaticRiddles,
     useSubmitFanaticAnswer, 
     useFanaticTries, 
     useFanaticBestTry,
@@ -37,16 +38,36 @@ function formatTime(
 
 function Fanatic() {
     const {
-        riddles,
+        status: gameStatus,
         nextGameDate,
-        noActiveGame,
+        loading: gameLoading,
+        error: gameError,
+    } = useFanaticGame();
+    const hasActiveGame = gameStatus === "active";
+    const {
+        riddles,
+        category,
         loading: riddlesLoading,
         error: riddlesError,
-    } = useFanaticRiddles();
+    } = useFanaticRiddles({ enabled: hasActiveGame });
     const { answer, loading: submitting, error: submitError } = useSubmitFanaticAnswer();
-    const { triesInfo, loading: triesLoading, error: triesError, refreshTriesInfo } = useFanaticTries();
-    const { bestTry, loading: bestTryLoading, error: bestTryError, refreshBestTry } = useFanaticBestTry();
-    const { nextRiddleDate, loading: nextRiddleLoading, error: nextRiddleError } = useFanaticNextRiddleDate();
+    const {
+        triesInfo,
+        loading: triesLoading,
+        error: triesError,
+        refreshTriesInfo,
+    } = useFanaticTries({ enabled: hasActiveGame });
+    const {
+        bestTry,
+        loading: bestTryLoading,
+        error: bestTryError,
+        refreshBestTry,
+    } = useFanaticBestTry({ enabled: hasActiveGame });
+    const {
+        nextRiddleDate,
+        loading: nextRiddleLoading,
+        error: nextRiddleError,
+    } = useFanaticNextRiddleDate({ enabled: hasActiveGame });
 
     const [guess, setGuess] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,7 +82,7 @@ function Fanatic() {
         refreshBestTry();
     };
     
-    if (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading) {
+    if (gameLoading || (hasActiveGame && (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading))) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <p className="text-xl font-anton animate-pulse">Loading...</p>
@@ -69,7 +90,7 @@ function Fanatic() {
         );
     }
 
-    if (noActiveGame && nextGameDate) {
+    if (gameStatus === "no-game" && nextGameDate) {
         return (
             <div className="flex items-center justify-center min-h-screen p-6">
                 <p className="text-xl text-black font-anton text-center">
@@ -87,7 +108,7 @@ function Fanatic() {
         );
     }
 
-    if (riddlesError || triesError || bestTryError || nextRiddleError) {
+    if (gameError || riddlesError || triesError || bestTryError || nextRiddleError) {
         return (
             <div className="flex items-center justify-center min-h-screen p-6">
                 <p className="text-xl text-red-500 font-anton text-center">
@@ -120,7 +141,13 @@ function Fanatic() {
         <div className="flex flex-col gap-4 min-h-screen p-6 max-w-2xl mx-auto items-center">
             {/* Carousel */}
             
+            {category && (
+                <p className="font-anton text-5xl text-black">
+                    {category.toUpperCase()}?
+                </p>
+            )}
             <CarouselCard items={carouselItems.length > 0 ? carouselItems : ["No clues available."]} />
+            
             <p className="font-lato text-lg font-semibold text-black">
                 {isFutureDate(nextRiddleDate) && (
                     <Countdown
