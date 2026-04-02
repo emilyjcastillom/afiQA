@@ -23,14 +23,35 @@ export function useFanaticRiddles() {
   const [category, setCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [nextGameDate, setNextGameDate] = useState<Date | null>(null);
+  const [noActiveGame, setNoActiveGame] = useState(false);
+
+  const fetchGames = async () => {
+    const { data, error } = await supabase.rpc("fanatic_time_next_game_date");
+    console.log("Fetched next game date:", data, "Error:", error);
+
+    if (error) throw error;
+
+    const nextGame = data?.[0]?.next_game;
+    setNextGameDate(nextGame ? new Date(nextGame) : null);
+  };
 
   const fetchRiddles = async () => {
     try {
       setLoading(true);
+      setNoActiveGame(false);
+      setNextGameDate(null);
 
       const { data, error } = await supabase.rpc("fanatic_get_current_game");
       
-      if (error) throw error;
+      if (error || !data || data.length === 0) {
+        await fetchGames();
+        setRiddles([]);
+        setCategory(null);
+        setNoActiveGame(true);
+        setError(error);
+        return;
+      }
 
       setRiddles(
         data?.map((row: any) => ({
@@ -58,6 +79,8 @@ export function useFanaticRiddles() {
   return {
     riddles,
     category,
+    nextGameDate,
+    noActiveGame,
     loading,
     error,
     refreshRiddles: fetchRiddles,
@@ -193,7 +216,6 @@ export function useFanaticNextRiddleDate() {
 
       const { data, error } = await supabase.rpc('fanatic_next_riddle_date');
 
-      console.log("Fetched next riddle date data:", data, "error:", error);
       if (error) throw error;
 
       setNextRiddleDate(typeof data === "string" ? new Date(data) : null);

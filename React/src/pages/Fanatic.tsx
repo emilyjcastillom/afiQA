@@ -29,7 +29,13 @@ function formatTime(
 }
 
 function Fanatic() {
-    const { riddles, loading, error } = useFanaticRiddles();
+    const {
+        riddles,
+        nextGameDate,
+        noActiveGame,
+        loading: riddlesLoading,
+        error: riddlesError,
+    } = useFanaticRiddles();
     const { answer, loading: submitting, error: submitError } = useSubmitFanaticAnswer();
     const { triesInfo, loading: triesLoading, error: triesError, refreshTriesInfo } = useFanaticTries();
     const { bestTry, loading: bestTryLoading, error: bestTryError, refreshBestTry } = useFanaticBestTry();
@@ -48,7 +54,7 @@ function Fanatic() {
         refreshBestTry();
     };
     
-    if (loading || triesLoading || bestTryLoading || nextRiddleLoading) {
+    if (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <p className="text-xl font-anton animate-pulse">Loading...</p>
@@ -56,7 +62,25 @@ function Fanatic() {
         );
     }
 
-    if (error || triesError || bestTryError || nextRiddleError) {
+    if (noActiveGame && nextGameDate) {
+        return (
+            <div className="flex items-center justify-center min-h-screen p-6">
+                <p className="text-xl text-black font-anton text-center">
+                    <Countdown
+                        key={nextGameDate.toISOString()}
+                        date={nextGameDate}
+                        intervalDelay={0}
+                        precision={0}
+                        renderer={(props) =>
+                            props.completed ? null : <>Next game in: {formatTime(props, true)}</>
+                        }
+                    />
+                </p>
+            </div>
+        );
+    }
+
+    if (riddlesError || triesError || bestTryError || nextRiddleError) {
         return (
             <div className="flex items-center justify-center min-h-screen p-6">
                 <p className="text-xl text-red-500 font-anton text-center">
