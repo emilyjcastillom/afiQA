@@ -88,6 +88,7 @@ export function useFanaticRiddles(options?: UseFanaticHookOptions) {
   const [riddles, setRiddles] = useState<Riddle[]>([]);
   const [category, setCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(enabled);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(!enabled);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchRiddles = async () => {
@@ -96,6 +97,7 @@ export function useFanaticRiddles(options?: UseFanaticHookOptions) {
       setCategory(null);
       setError(null);
       setLoading(false);
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -121,6 +123,7 @@ export function useFanaticRiddles(options?: UseFanaticHookOptions) {
       );
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -132,6 +135,7 @@ export function useFanaticRiddles(options?: UseFanaticHookOptions) {
     riddles,
     category,
     loading,
+    hasLoadedOnce,
     error,
     refreshRiddles: fetchRiddles,
   };
@@ -172,6 +176,7 @@ export function useFanaticTries(options?: UseFanaticHookOptions) {
   const enabled = options?.enabled ?? true;
   const [triesInfo, setTriesInfo] = useState<TriesInfo | null>(null);
   const [loading, setLoading] = useState(enabled);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(!enabled);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchTriesInfo = async () => {
@@ -179,6 +184,7 @@ export function useFanaticTries(options?: UseFanaticHookOptions) {
       setTriesInfo(null);
       setError(null);
       setLoading(false);
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -212,6 +218,7 @@ export function useFanaticTries(options?: UseFanaticHookOptions) {
       );
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -222,6 +229,7 @@ export function useFanaticTries(options?: UseFanaticHookOptions) {
   return {
     triesInfo,
     loading,
+    hasLoadedOnce,
     error,
     refreshTriesInfo: fetchTriesInfo,
   };
@@ -231,6 +239,7 @@ export function useFanaticBestTry(options?: UseFanaticHookOptions) {
   const enabled = options?.enabled ?? true;
   const [bestTry, setBestTry] = useState<BestTry | null>(null);
   const [loading, setLoading] = useState(enabled);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(!enabled);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchBestTry = async () => {
@@ -238,6 +247,7 @@ export function useFanaticBestTry(options?: UseFanaticHookOptions) {
       setBestTry(null);
       setError(null);
       setLoading(false);
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -268,6 +278,7 @@ export function useFanaticBestTry(options?: UseFanaticHookOptions) {
       );
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -278,6 +289,7 @@ export function useFanaticBestTry(options?: UseFanaticHookOptions) {
   return {
     bestTry,
     loading,
+    hasLoadedOnce,
     error,
     refreshBestTry: fetchBestTry,
   };
@@ -287,6 +299,7 @@ export function useFanaticNextRiddleDate(options?: UseFanaticHookOptions) {
   const enabled = options?.enabled ?? true;
   const [nextRiddleDate, setNextRiddleDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(enabled);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(!enabled);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchNextRiddleDate = async () => {
@@ -294,6 +307,7 @@ export function useFanaticNextRiddleDate(options?: UseFanaticHookOptions) {
       setNextRiddleDate(null);
       setError(null);
       setLoading(false);
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -314,6 +328,7 @@ export function useFanaticNextRiddleDate(options?: UseFanaticHookOptions) {
       );
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -324,6 +339,7 @@ export function useFanaticNextRiddleDate(options?: UseFanaticHookOptions) {
   return {
     nextRiddleDate,
     loading,
+    hasLoadedOnce,
     error,
     refreshNextRiddleDate: fetchNextRiddleDate,
   };

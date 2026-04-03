@@ -113,7 +113,7 @@ function Fanatic() {
     const {
         riddles,
         category,
-        loading: riddlesLoading,
+        hasLoadedOnce: riddlesReady,
         error: riddlesError,
     } = useFanaticRiddles({ enabled: hasActiveGame });
     const { 
@@ -124,19 +124,19 @@ function Fanatic() {
     } = useSubmitFanaticAnswer();
     const {
         triesInfo,
-        loading: triesLoading,
+        hasLoadedOnce: triesReady,
         error: triesError,
         refreshTriesInfo,
     } = useFanaticTries({ enabled: hasActiveGame && hasAuthenticatedUser });
     const {
         bestTry,
-        loading: bestTryLoading,
+        hasLoadedOnce: bestTryReady,
         error: bestTryError,
         refreshBestTry,
     } = useFanaticBestTry({ enabled: hasActiveGame && hasAuthenticatedUser });
     const {
         nextRiddleDate,
-        loading: nextRiddleLoading,
+        hasLoadedOnce: nextRiddleReady,
         error: nextRiddleError,
     } = useFanaticNextRiddleDate({ enabled: hasActiveGame });
 
@@ -162,7 +162,18 @@ function Fanatic() {
         }
     };
     
-    if (profileLoading || gameLoading || (hasActiveGame && (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading))) {
+    /*
+    A game is active but UI is still waiting for the riddles, 
+    the next riddle, or, if the user is logged in, 
+    their tries and best try to finish loading.
+    */
+    const isInitialActiveGameLoad =
+        hasActiveGame &&
+        (!riddlesReady ||
+            (hasAuthenticatedUser && (!triesReady || !bestTryReady)) ||
+            !nextRiddleReady);
+
+    if (profileLoading || gameLoading || isInitialActiveGameLoad) {
         return (<>
             <NavBar />
             <div className="flex items-center justify-center min-h-screen">
