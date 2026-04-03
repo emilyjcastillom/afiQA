@@ -13,10 +13,16 @@ export function useProfile() {
 
     useEffect(() => {
         const getUser = async () => {
+            setLoading(true);
             const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-            if (authError || !authUser) {
-                setError(authError || new Error("No user found"));
+            const isAnonymousUser =
+                authUser?.is_anonymous ||
+                authUser?.app_metadata?.provider === "anonymous";
+
+            if (authError || !authUser || isAnonymousUser) {
+                setUser(null);
+                setError(authError ?? null);
                 setLoading(false);
                 return;
             }
@@ -29,13 +35,26 @@ export function useProfile() {
             
 
             if (profileError) {
+                setUser(null);
                 setError(profileError);
             } else {
                 setUser(profile);
+                setError(null);
             }
             setLoading(false);
         };
+
         getUser();
+
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(() => {
+            getUser();
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     return { user, loading, error };
