@@ -9,11 +9,15 @@ export interface UserProfileData {
 export function useProfile() {
     const [user, setUser] = useState<UserProfileData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        const getUser = async () => {
-            setLoading(true);
+        const getUser = async (showLoader = false) => {
+            if (showLoader) {
+                setLoading(true);
+            }
+
             const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
             const isAnonymousUser =
@@ -24,6 +28,7 @@ export function useProfile() {
                 setUser(null);
                 setError(authError ?? null);
                 setLoading(false);
+                setHasLoadedOnce(true);
                 return;
             }
 
@@ -42,14 +47,15 @@ export function useProfile() {
                 setError(null);
             }
             setLoading(false);
+            setHasLoadedOnce(true);
         };
 
-        getUser();
+        getUser(true);
 
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(() => {
-            getUser();
+            getUser(false);
         });
 
         return () => {
@@ -57,5 +63,5 @@ export function useProfile() {
         };
     }, []);
 
-    return { user, loading, error };
+    return { user, loading, hasLoadedOnce, error };
 }
