@@ -21,11 +21,18 @@ function isFutureDate(date?: Date | null) {
 }
 
 function handleSimilarityText(similarity: number | null) {
-    if (similarity === null) {
-        return "The ref called time out.";
-    }
+    let messages: string[] = [];
 
-    let messages;
+    if (similarity === null) {
+        messages = [
+            "Ref called timeout",
+            "Technical foul",
+            "Ball went out of bounds",
+            "Foul on the play",
+            "The ref blew the whistle"
+        ];
+        return messages[Math.floor(Math.random() * messages.length)];
+    }
 
     if (similarity >= 0.8) {
          messages = [
@@ -39,33 +46,33 @@ function handleSimilarityText(similarity: number | null) {
         messages = [
             "You're in the paint!",
             "Open look, take the shot!",
-            "That's a good read of the play.",
-            "You're driving to the basket.",
+            "That's a good read of the play",
+            "You're driving to the basket",
             "One dribble away!",
         ];
     } else if (similarity >= 0.4) {
         messages = [
-            "You're finding your range.",
-            "Getting into the game.",
-            "Warming up on the court.",
-            "That one grazed the rim.",
-            "Almost in shooting position.",
+            "You're finding your range",
+            "Getting into the game",
+            "Warming up on the court",
+            "That one grazed the rim",
+            "Almost in shooting position",
         ];
     } else if (similarity >= 0.2) {
         messages = [
-            "Way off the rim.",
-            "Missed the court entirely.",
-            "Coach is not happy.",
-            "Clang! Off the backboard.",
-            "That shot had no chance.",
+            "Way off the rim",
+            "Missed the court entirely",
+            "Coach is not happy",
+            "Clang! Off the backboard",
+            "That shot had no chance",
         ];
     } else {
         messages = [
-            "Airball! Not even close.",
-            "Didn't even hit the backboard.",
-            "You shot at the wrong hoop.",
-            "Bench yourself and rethink.",
-            "That shot left the building.",
+            "Airball! Not even close",
+            "Didn't even hit the backboard",
+            "You shot at the wrong hoop",
+            "Bench yourself and rethink",
+            "That shot left the building",
         ];
     }
     return messages[Math.floor(Math.random() * messages.length)];
@@ -109,7 +116,12 @@ function Fanatic() {
         loading: riddlesLoading,
         error: riddlesError,
     } = useFanaticRiddles({ enabled: hasActiveGame });
-    const { answer, loading: submitting } = useSubmitFanaticAnswer();
+    const { 
+        answer, 
+        loading: 
+        submitting, 
+        error: submitError 
+    } = useSubmitFanaticAnswer();
     const {
         triesInfo,
         loading: triesLoading,
@@ -134,12 +146,20 @@ function Fanatic() {
 
     const handleGuess = async () => {
         if (!guess.trim()) return;
-        const result = await answer(guess);
-        if (!result) return;
-        setSubmitResult(result);
-        setDialogOpen(true);
-        refreshTriesInfo();
-        refreshBestTry();
+
+        try {
+            const result = await answer(guess);
+
+            if (!result) return;
+
+            setSubmitResult(result);
+            setDialogOpen(true);
+            refreshTriesInfo();
+            refreshBestTry();
+        } catch {
+            setSubmitResult(null);
+            setDialogOpen(true);
+        }
     };
     
     if (profileLoading || gameLoading || (hasActiveGame && (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading))) {
@@ -263,22 +283,30 @@ function Fanatic() {
                     {/* Result Dialog */}
                     <Dialog isOpen={dialogOpen} className="max-w-2xl mx-auto">
                         <div className="flex flex-col gap-3 text-center items-center">
-                            <h2 className="text-3xl font-anton text-black mb-2">
+                            <h2 className={`text-3xl font-anton ${submitError ? 'text-red-500' : 'text-black'} mb-2`}>
                                 {handleSimilarityText(submitResult?.similarity_score ?? null)}
                             </h2>
-                            <h4 className="text-xl font-lato text-black font-semibold">
-                               Similarity Score:
-                            </h4>
-                            <p className="font-lato text-lg">
-                                {submitResult ? `${(submitResult.similarity_score * 100).toFixed(2)}%` : "N/A"}
+                        {submitError ? (
+                            <p className="text-black font-lato text-lg text-center">
+                                There was an error submitting your guess. Please try again later.
                             </p>
-                            <h4 className="text-xl font-lato text-black font-semibold">
-                               Awarded Points:
-                            </h4>
-                            <p className="font-lato text-lg">
-                                {submitResult ? submitResult.awarded_points : "N/A"}
-                            </p>
-                            <Button 
+                        ) : (
+                            <>
+                                <h4 className="text-xl font-lato text-black font-semibold">
+                                Similarity Score:
+                                </h4>
+                                <p className="font-lato text-lg">
+                                    {submitResult ? `${(submitResult.similarity_score * 100).toFixed(2)}%` : "N/A"}
+                                </p>
+                                <h4 className="text-xl font-lato text-black font-semibold">
+                                Awarded Points:
+                                </h4>
+                                <p className="font-lato text-lg">
+                                    {submitResult ? submitResult.awarded_points : "N/A"}
+                                </p>
+                            </>
+                        )}
+                        <Button 
                                 variant="primary" 
                                 onClick={() => setDialogOpen(false)}
                                 className="w-full mt-2"

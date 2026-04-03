@@ -144,16 +144,18 @@ export function useSubmitFanaticAnswer() {
   const answer = async (answer: string): Promise<FanaticAnswer | undefined> => {
     try {
       setLoading(true);
+      setError(null);
 
       const data = await submitAnswer(answer);
 
-      setError(null);
       return data;
     } catch (err) {
-      console.error("Error in useSubmitAnswer hook:", err);
-      setError(
-        err instanceof Error ? err : new Error("Failed to submit answer"),
-      );
+      const submitError =
+        err instanceof Error ? err : new Error("Failed to submit answer");
+
+      console.error("Error in useSubmitAnswer hook:", submitError);
+      setError(submitError);
+      throw submitError;
     } finally {
       setLoading(false);
     }
