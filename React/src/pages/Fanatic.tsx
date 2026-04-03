@@ -13,6 +13,7 @@ import {
     useFanaticNextRiddleDate
 } from "../hooks/useFanatic";
 import { useProfile } from "../hooks/useProfile";
+import NavBar from "../components/layout/NavBar";
 
 function isFutureDate(date?: Date | null) {
     return !!date && date.getTime() > Date.now();
@@ -91,15 +92,18 @@ function Fanatic() {
     };
     
     if (profileLoading || gameLoading || (hasActiveGame && (riddlesLoading || triesLoading || bestTryLoading || nextRiddleLoading))) {
-        return (
+        return (<>
+            <NavBar />
             <div className="flex items-center justify-center min-h-screen">
                 <p className="text-xl font-anton animate-pulse">Loading...</p>
             </div>
-        );
+        </>);
     }
 
     if (gameStatus === "no-game" && nextGameDate) {
         return (
+            <>
+            <NavBar />
             <div className="flex items-center justify-center min-h-screen p-6">
                 <p className="text-xl text-black font-anton text-center">
                     <Countdown
@@ -113,16 +117,19 @@ function Fanatic() {
                     />
                 </p>
             </div>
+        </>
         );
     }
 
     if (gameError || riddlesError || triesError || bestTryError || nextRiddleError) {
-        return (
+        return (<>
+            <NavBar />
             <div className="flex items-center justify-center min-h-screen p-6">
                 <p className="text-xl text-red-500 font-anton text-center">
                     Oops! Something went wrong fetching the data.
                 </p>
             </div>
+        </>
         );
     }
 
@@ -135,8 +142,9 @@ function Fanatic() {
 
     return (
         <>
+            <NavBar />
         {/* Header section with Tries Info */}
-            <div className="w-full flex justify-between items-center px-10 py-4">
+            <div className="w-full flex justify-between items-center px-10 py-8">
                 <div className="flex items-center gap-3">
                     <span className="font-anton text-5xl text-primary">{bestTry?.highest_similarity ?? 0}%</span>
                     <span className="font-lato text-sm text-black">Best<br />Try</span>
