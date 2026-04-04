@@ -26,6 +26,25 @@ export async function answerQuestion(req: Request) {
 
   const userId = user.id;
 
+  try {
+    const hasTries = await checkRemainingTries(supabase, userId);
+    if (!hasTries) {
+      return new Response(
+        JSON.stringify({ error: "Maximum tries reached. Please wait for the next attempt." }),
+        {
+          headers: { "Content-Type": "application/json" },
+          status: 403,
+        },
+      );
+    }
+  } catch (error) {
+    const errPrefix = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: errPrefix }), {
+      headers: { "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+
   const playerEmbedding = await getPlayerEmbedding(answer);
 
   const gameId = await getActiveGameId(supabase);
@@ -42,7 +61,7 @@ export async function answerQuestion(req: Request) {
   const answerData = {
     answer,
     game_id: gameId,
-    user_id: userId,
+    profile_id: userId,
     awarded_points: points,
     similarity_score: similarity,
     is_correct,
@@ -155,4 +174,18 @@ function cosineSimilarity(vecA: number[], vecB: number[]) {
     return 0;
   }
   return dotProduct / (magnitudeA * magnitudeB);
+}
+
+async function checkRemainingTries(supabase: SupabaseClient, userId: string) {
+  const { data: triesData, error: triesError } = await supabase.rpc(
+    "fanatic_remaining_game_tries",
+    { pprofileid: userId },
+  );
+
+  if (triesError) {
+    throw new Error("Failed to fetch tries info");
+  }
+
+  const triesInfo = triesData?.[0];
+  return (triesInfo?.remaining_tries_today ?? 0) > 0;
 }
