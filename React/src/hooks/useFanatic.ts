@@ -33,7 +33,7 @@ export function useFanaticGame() {
 
   const fetchNextGameDate = async () => {
     const { data, error } = await supabase.rpc("fanatic_time_next_game_date");
-
+    console.log("Next game date response:", { data, error });
     if (error) throw error;
 
     const nextGame = data?.[0]?.next_game;
