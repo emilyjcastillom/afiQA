@@ -110,6 +110,8 @@ function Fanatic() {
 
     const hasAuthenticatedUser = user !== null;
     const hasActiveGame = gameStatus === "active";
+    const noFutureGame = gameStatus === "no-game" && !nextGameDate;
+
     const {
         riddles,
         category,
@@ -174,44 +176,60 @@ function Fanatic() {
             !nextRiddleReady);
 
     if (profileLoading || gameLoading || isInitialActiveGameLoad) {
-        return (<>
-            <NavBar />
-            <div className="flex items-center justify-center min-h-screen">
-                <p className="text-xl font-anton animate-pulse">Loading...</p>
+        return (
+            <div className="flex flex-col h-screen overflow-hidden">
+                <NavBar />
+                <div className="flex-1 flex items-center justify-center">
+                    <p className="text-xl font-anton animate-pulse">Loading...</p>
+                </div>
             </div>
-        </>);
+        );
     }
 
     if (gameStatus === "no-game" && nextGameDate) {
         return (
-            <>
-            <NavBar />
-            <div className="flex items-center justify-center min-h-screen p-6">
-                <p className="text-xl text-black font-anton text-center">
-                    <Countdown
-                        key={nextGameDate.toISOString()}
-                        date={nextGameDate}
-                        intervalDelay={0}
-                        precision={0}
-                        renderer={(props) =>
-                            props.completed ? null : <>Next game in: {formatTime(props)}</>
-                        }
-                    />
-                </p>
+            <div className="flex flex-col h-screen overflow-hidden">
+                <NavBar />
+                <div className="flex-1 flex items-center justify-center p-6">
+                    <p className="text-xl text-black font-anton text-center">
+                        <Countdown
+                            key={nextGameDate.toISOString()}
+                            date={nextGameDate}
+                            intervalDelay={0}
+                            precision={0}
+                            renderer={(props) =>
+                                props.completed ? null : <>Next game in: {formatTime(props)}</>
+                            }
+                        />
+                    </p>
+                </div>
             </div>
-        </>
+        );
+    }
+
+    if (noFutureGame) {
+        return (
+            <div className="flex flex-col h-screen overflow-hidden">
+                <NavBar />
+                <div className="flex-1 flex items-center justify-center p-6">
+                    <p className="text-xl text-black font-anton text-center">
+                        No active game right now. Check back later!
+                    </p>
+                </div>
+            </div>
         );
     }
 
     if (gameError || riddlesError || triesError || bestTryError || nextRiddleError) {
-        return (<>
-            <NavBar />
-            <div className="flex items-center justify-center min-h-screen p-6">
-                <p className="text-xl text-red-500 font-anton text-center">
-                    Oops! Something went wrong fetching the data.
-                </p>
+        return (
+            <div className="flex flex-col h-screen overflow-hidden">
+                <NavBar />
+                <div className="flex-1 flex items-center justify-center p-6">
+                    <p className="text-xl text-red-500 font-anton text-center">
+                        Oops! Something went wrong fetching the data.
+                    </p>
+                </div>
             </div>
-        </>
         );
     }
 
