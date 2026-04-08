@@ -17,6 +17,7 @@ type RoomCardProps = {
 
 function RoomCard({ room }: RoomCardProps) {
   const isLive = room.status === "live";
+  const actionLabel = isLive ? "Join Room" : "See Summary";
 
   return (
     <Card
@@ -69,7 +70,7 @@ function RoomCard({ room }: RoomCardProps) {
                   : "border-transparent bg-[#c8d0dc] text-white"
               }`}
             >
-              Join Room
+              {actionLabel}
             </Button>
           </div>
 
