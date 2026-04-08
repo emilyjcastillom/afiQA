@@ -6,6 +6,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Room } from "../../components/ui/RoomCard";
+import {
+  buildPredictionAnnouncement,
+  predictionOptions,
+  type PredictionOption,
+} from "./chatPredictionMock";
 
 type ChatLocationState = {
   room?: Room;
@@ -16,7 +21,7 @@ type ChatMessage = {
   sender: string;
   text: string;
   time: string;
-  align: "left" | "right";
+  align: "left" | "right" | "center";
 };
 
 const defaultRoom: Room = {
@@ -101,6 +106,8 @@ function RoomChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(baseMessages);
   const [predictionOpen, setPredictionOpen] = useState(true);
   const [predictionCountdown, setPredictionCountdown] = useState(12);
+  const [selectedPrediction, setSelectedPrediction] = useState<PredictionOption | null>(null);
+  const [predictionRound, setPredictionRound] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const scoreboard = useMemo(() => scoreSeed(room), [room]);
@@ -119,6 +126,34 @@ function RoomChat() {
     return () => window.clearInterval(intervalId);
   }, [predictionOpen]);
 
+  useEffect(() => {
+    if (!selectedPrediction) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const announcement = buildPredictionAnnouncement(
+        selectedPrediction,
+        predictionRound
+      );
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: Date.now(),
+          sender: "System",
+          text: announcement.text,
+          time: formatMessageTime(new Date()),
+          align: "center",
+        },
+      ]);
+      setSelectedPrediction(null);
+      setPredictionOpen(true);
+      setPredictionCountdown(12);
+      setPredictionRound((current) => current + 1);
+    }, 30000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [predictionRound, selectedPrediction]);
+
   function handleSendMessage() {
     const trimmedDraft = draft.trim();
     if (!trimmedDraft) return;
@@ -135,16 +170,8 @@ function RoomChat() {
     setDraft("");
   }
 
-  function handlePredictionSelect(prediction: "Triple" | "Double" | "Foul") {
-    const predictionMessage: ChatMessage = {
-      id: Date.now(),
-      sender: "You",
-      text: `Prediction: ${prediction}`,
-      time: formatMessageTime(new Date()),
-      align: "right",
-    };
-
-    setMessages((current) => [...current, predictionMessage]);
+  function handlePredictionSelect(prediction: PredictionOption) {
+    setSelectedPrediction(prediction);
     setPredictionOpen(false);
   }
 
@@ -243,9 +270,20 @@ function RoomChat() {
                 <div
                   key={message.id}
                   className={`flex ${
-                    message.align === "right" ? "justify-end" : "justify-start"
+                    message.align === "right"
+                      ? "justify-end"
+                      : message.align === "center"
+                        ? "justify-center"
+                        : "justify-start"
                   }`}
                 >
+                  {message.align === "center" ? (
+                    <div className="rounded-full bg-[#eef3fb] px-4 py-2 shadow-[0_8px_18px_rgba(27,52,95,0.06)]">
+                      <p className="font-lato text-[0.76rem] font-bold text-[#5b6a80] sm:text-sm">
+                        {message.text}
+                      </p>
+                    </div>
+                  ) : (
                   <div className="max-w-[82%]">
                     {message.align === "left" && (
                       <p className="mb-1 px-1 font-lato text-[0.7rem] text-[#9aa6b8]">
@@ -271,6 +309,7 @@ function RoomChat() {
                       {message.time}
                     </p>
                   </div>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -278,6 +317,14 @@ function RoomChat() {
           </div>
 
           <div className="sticky bottom-0 border-t border-[#e7edf6] bg-white px-4 py-3 sm:px-5">
+            {selectedPrediction && (
+              <div className="mb-3 rounded-[1rem] border border-[#d5e2f6] bg-[#edf4ff] px-4 py-3 shadow-[0_8px_20px_rgba(30,64,140,0.08)]">
+                <p className="font-lato text-sm font-bold text-secondary sm:text-[0.95rem]">
+                  Prediction: {selectedPrediction}
+                </p>
+              </div>
+            )}
+
             {predictionOpen && (
               <div className="mb-3 overflow-hidden rounded-[1.15rem] border border-[#c7d8f2] bg-[#2d4f8d] shadow-[0_12px_24px_rgba(25,52,102,0.18)]">
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2 text-white">
@@ -290,7 +337,7 @@ function RoomChat() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 p-2">
-                  {(["Triple", "Double", "Foul"] as const).map((option) => (
+                  {predictionOptions.map((option) => (
                     <button
                       key={option}
                       type="button"
