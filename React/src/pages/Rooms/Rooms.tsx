@@ -1,12 +1,17 @@
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { useState } from "react";
-import NavBar from "../components/layout/NavBar";
-import Button from "../components/ui/Button";
-import RoomCard, { type Room } from "../components/ui/RoomCard";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import NavBar from "../../components/layout/NavBar";
+import Button from "../../components/ui/Button";
+import RoomCard, { type Room } from "../../components/ui/RoomCard";
 
 type RoomFilter = "all" | "live" | "offline";
 
-const rooms: Room[] = [
+type RoomsLocationState = {
+  createdRoom?: Room;
+};
+
+const initialRooms: Room[] = [
   {
     id: 1,
     title: "Warriors Game Night",
@@ -33,7 +38,25 @@ const rooms: Room[] = [
 ];
 
 function Rooms() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [filter, setFilter] = useState<RoomFilter>("all");
+  const [rooms, setRooms] = useState<Room[]>(initialRooms);
+
+  useEffect(() => {
+    const state = location.state as RoomsLocationState | null;
+    const createdRoom = state?.createdRoom;
+
+    if (!createdRoom) return;
+
+    setRooms((current) =>
+      current.some((room) => room.id === createdRoom.id)
+        ? current
+        : [createdRoom, ...current]
+    );
+    setFilter("all");
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const orderedRooms = [...rooms].sort((a, b) => {
     if (a.status === "live" && b.status !== "live") return -1;
@@ -90,7 +113,7 @@ function Rooms() {
 
                 <Button
                   variant="primary"
-                  onClick={() => {}}
+                  onClick={() => navigate("/rooms/create")}
                   className="mt-3 w-full rounded-xl border-transparent py-2 text-[0.9rem] font-bold text-secondary sm:mt-4 sm:py-3 sm:text-[0.95rem] lg:py-3.5 lg:text-base xl:py-4 xl:text-lg"
                 >
                   Create Room
