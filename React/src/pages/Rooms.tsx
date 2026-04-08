@@ -143,30 +143,6 @@ function Rooms() {
         <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)] xl:items-stretch">
           <div className="rounded-[1.45rem] bg-secondary px-3.5 py-3.5 text-white shadow-[0_20px_50px_rgba(29,66,138,0.28)] sm:px-5 sm:py-5 lg:px-6 lg:py-6 xl:min-h-[460px] xl:rounded-[2rem]">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-start xl:grid-cols-1 xl:gap-4">
-              <div>
-                <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:gap-4">
-                  <div className="rounded-[1.15rem] border border-white/15 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4 lg:p-5">
-                    <div className="flex items-center justify-between gap-2 sm:justify-between">
-                      <p className="font-lato text-[0.62rem] uppercase tracking-[0.12em] text-white/70 sm:text-xs lg:text-sm">
-                        Active:
-                      </p>
-                      <p className="font-anton text-[1.55rem] leading-none text-primary sm:text-[1.9rem] lg:text-[2.4rem] xl:text-[2.8rem]">
-                        {liveCount}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.15rem] border border-white/15 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4 lg:p-5">
-                    <div className="flex items-center justify-between gap-2 sm:justify-between">
-                      <p className="font-lato text-[0.62rem] uppercase tracking-[0.12em] text-white/70 sm:text-xs lg:text-sm">
-                        Total:
-                      </p>
-                      <p className="font-anton text-[1.55rem] leading-none text-primary sm:text-[1.9rem] lg:text-[2.4rem] xl:text-[2.8rem]">
-                        {orderedRooms.length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <div className="rounded-[1.15rem] border border-white/12 bg-white/8 p-3 backdrop-blur-sm sm:rounded-[1.35rem] sm:p-4 lg:p-5 xl:mt-6 xl:rounded-[1.75rem] xl:p-6">
                 <div className="flex items-start justify-between gap-4">
