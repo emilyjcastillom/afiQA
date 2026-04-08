@@ -2,6 +2,8 @@ import NavBar from "../components/layout/NavBar"
 import { ProductGroupCard } from "../components/ui/shop/ProductGroupCard"; 
 import { useCategories, useCollections, usePlayers } from "../hooks/useShopGroups";
 import ShopCarousel from "../components/ui/shop/Carrousel";
+import ShopHero from "../components/ui/shop/Hero";
+import ShopSeparator from "../components/ui/shop/Separator";
 
 
 export default function Shop() {
@@ -24,18 +26,9 @@ export default function Shop() {
 
   return (<>
   <NavBar />
+  <ShopHero />
 
-  <ShopCarousel>
-    {collections.map(collection => (
-      <ProductGroupCard
-        key={collection.name}
-        title={collection.name}
-        imageUrl={collection.image_url}
-        onClick={() => console.log(`Collection ${collection.name} clicked`)}
-      />
-    ))}
-  </ShopCarousel>
-
+<h2 className=" px-6 text-3xl md:text-4xl font-bold text-black font-anton md:px-8">Shop by Player</h2>
   <ShopCarousel>
     {players.map(player => (
       <ProductGroupCard
@@ -47,5 +40,21 @@ export default function Shop() {
       />
     ))}
   </ShopCarousel>
+
+  <ShopSeparator message="Complete your fit with exclusive team collections" />
+
+  <h2 className=" px-6 text-3xl md:text-4xl font-bold text-black font-anton md:px-8">Our Collections</h2>
+  <ShopCarousel>
+    {collections.map(collection => (
+      <ProductGroupCard
+        key={collection.name}
+        title={collection.name}
+        imageUrl={collection.image_url}
+        onClick={() => console.log(`Collection ${collection.name} clicked`)}
+      />
+    ))}
+  </ShopCarousel>
+ 
+
   </>);
 }
