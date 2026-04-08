@@ -1,17 +1,8 @@
-import { PlusIcon, UserGroupIcon } from "@heroicons/react/24/solid";
+import { PlusIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import NavBar from "../components/layout/NavBar";
 import Button from "../components/ui/Button";
-import Card from "../components/ui/Card";
-
-type Room = {
-  id: number;
-  title: string;
-  status?: "live";
-  members: string;
-  subtitle: string;
-  accent: string;
-};
+import RoomCard, { type Room } from "../components/ui/RoomCard";
 
 type RoomFilter = "all" | "live" | "offline";
 
@@ -41,77 +32,6 @@ const rooms: Room[] = [
   },
 ];
 
-function RoomCard({ room }: { room: Room }) {
-  const isLive = room.status === "live";
-
-  return (
-    <Card
-      className={`w-full rounded-[1.35rem] p-3.5 shadow-[0_14px_34px_rgba(17,24,39,0.08)] sm:p-4 xl:min-h-[180px] xl:rounded-[1.5rem] xl:p-5 ${
-        isLive
-          ? "border-2 border-secondary bg-white"
-          : "border border-[#d7dce6] bg-[#f4f6fa]"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
-          style={{ backgroundColor: isLive ? room.accent : "#98A2B3" }}
-        >
-          <UserGroupIcon className="h-6 w-6" />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2
-                  className={`font-lato text-[0.98rem] font-bold leading-5 sm:text-[1.05rem] lg:text-[1.18rem] xl:text-[1.45rem] xl:leading-8 ${
-                    isLive ? "text-[#22314d]" : "text-[#4b5565]"
-                  }`}
-                >
-                  {room.title}
-                </h2>
-                {room.status === "live" && (
-                  <span className="rounded-full bg-[#ff4d57] px-2 py-1 font-lato text-[0.55rem] font-bold uppercase tracking-[0.14em] text-white">
-                    Live
-                  </span>
-                )}
-              </div>
-              <p
-                className={`mt-1 font-lato text-[0.78rem] sm:text-sm lg:text-[0.98rem] xl:text-[1.08rem] ${
-                  isLive ? "text-[#566173]" : "text-[#8b94a3]"
-                }`}
-              >
-                {room.members}
-              </p>
-            </div>
-
-            <Button
-              variant="secondary"
-              onClick={() => {}}
-              className={`w-full rounded-xl px-4 py-2 text-xs font-bold sm:w-auto lg:px-5 lg:py-2.5 lg:text-sm xl:px-6 xl:py-3 xl:text-base ${
-                isLive
-                  ? "border-transparent bg-secondary text-white"
-                  : "border-transparent bg-[#c8d0dc] text-white"
-              }`}
-            >
-              Join Room
-            </Button>
-          </div>
-
-          <p
-            className={`mt-3 font-lato text-[0.78rem] sm:text-sm lg:text-[0.98rem] xl:mt-4 xl:text-[1.05rem] ${
-              isLive ? "text-[#8a95a7]" : "text-[#a4acb8]"
-            }`}
-          >
-            {room.subtitle}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 function Rooms() {
   const [filter, setFilter] = useState<RoomFilter>("all");
 
@@ -135,9 +55,14 @@ function Rooms() {
 
       <main className="mx-auto flex min-h-[calc(100vh-72px)] w-full max-w-[1880px] flex-col gap-5 px-3 py-3 sm:px-5 sm:py-6 xl:px-12 2xl:px-16">
         <header className="px-1 pt-1 sm:px-0">
-          <h1 className="font-barlow-condensed text-[2rem] font-semibold tracking-[-0.02em] leading-[0.92] text-secondary sm:text-[2.35rem] lg:text-[3rem] xl:text-[3.7rem]">
-            Private Fan Rooms
-          </h1>
+          <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.28em] text-secondary/65 sm:text-[0.74rem] lg:text-[0.82rem]">
+            Fan Community
+          </p>
+          <div className="mt-1">
+            <h1 className="font-barlow-condensed text-[2.05rem] font-semibold tracking-[-0.03em] leading-[0.92] text-[#1f3668] sm:text-[2.45rem] lg:text-[3.15rem] xl:text-[3.85rem]">
+              Private Fan Rooms
+            </h1>
+          </div>
         </header>
 
         <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)] xl:items-stretch">
