@@ -175,7 +175,14 @@ function Rooms() {
 
             <div className="mt-6 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {filteredRooms.map((room) => (
-                <RoomCard key={room.id} room={room} />
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  onActionClick={(selectedRoom) => {
+                    if (selectedRoom.status !== "live") return;
+                    navigate("/rooms/chat", { state: { room: selectedRoom } });
+                  }}
+                />
               ))}
             </div>
 

@@ -13,9 +13,10 @@ export type Room = {
 
 type RoomCardProps = {
   room: Room;
+  onActionClick?: (room: Room) => void;
 };
 
-function RoomCard({ room }: RoomCardProps) {
+function RoomCard({ room, onActionClick }: RoomCardProps) {
   const isLive = room.status === "live";
   const actionLabel = isLive ? "Join Room" : "See Summary";
 
@@ -63,7 +64,7 @@ function RoomCard({ room }: RoomCardProps) {
 
             <Button
               variant="secondary"
-              onClick={() => {}}
+              onClick={() => onActionClick?.(room)}
               className={`w-full rounded-xl px-4 py-2 text-xs font-bold sm:w-auto lg:px-5 lg:py-2.5 lg:text-sm xl:px-6 xl:py-3 xl:text-base ${
                 isLive
                   ? "border-transparent bg-secondary text-white"
