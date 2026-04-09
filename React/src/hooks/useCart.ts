@@ -43,6 +43,26 @@ export async function addItemToCart(pricedProductId: number) {
   notifyCartUpdated();
 }
 
+export async function removeItemFromCart(cartItemId: number) {
+  const session = await getSession();
+  const profileId = session?.user?.id;
+
+  if (!profileId) {
+    throw new Error("You must be signed in to remove items from your cart.");
+  }
+
+  const { error } = await supabase.rpc("remove_item_from_active_cart", {
+    p_profile_id: profileId,
+    p_cart_item_id: cartItemId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  notifyCartUpdated();
+}
+
 export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
