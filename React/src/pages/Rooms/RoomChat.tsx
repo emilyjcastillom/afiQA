@@ -96,6 +96,15 @@ function mergePersistedMessages(
   );
 }
 
+function parseClockToSeconds(clock: string) {
+  const [minutesPart, secondsPart] = clock.split(":");
+  const minutes = Number(minutesPart);
+  const seconds = Number(secondsPart);
+
+  if (Number.isNaN(minutes) || Number.isNaN(seconds)) return null;
+  return minutes * 60 + seconds;
+}
+
 function RoomChat() {
   const predictionBaseSeconds = 15;
   const { roomId } = useParams();
@@ -127,6 +136,12 @@ function RoomChat() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedPredictionRef = useRef<PredictionSelection | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const clockSeconds = parseClockToSeconds(gameState.clock);
+  const isClutchMoment =
+    gameState.quarterLabel === "4th" &&
+    gameState.statusLabel !== "Final" &&
+    clockSeconds !== null &&
+    clockSeconds <= 19;
 
   useEffect(() => {
     if (!activeRoomId) {
@@ -408,10 +423,20 @@ function RoomChat() {
             </div>
           </div>
 
-          <div className="bg-primary px-4 py-3 text-secondary sm:px-5 sm:py-3.5">
+          <div
+            className={`px-4 py-3 sm:px-5 sm:py-3.5 ${
+              isClutchMoment
+                ? "bg-[linear-gradient(135deg,#a40f2a_0%,#d62d47_52%,#ff5c73_100%)] text-white shadow-[inset_0_-12px_28px_rgba(100,0,14,0.18)]"
+                : "bg-primary text-secondary"
+            }`}
+          >
             <div className="grid grid-cols-3 items-center">
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isClutchMoment ? "text-white/80" : "text-secondary/65"
+                  }`}
+                >
                   {gameState.leftTeam}
                 </p>
                 <p className="font-anton text-[1.75rem] leading-none sm:text-[2.2rem]">
@@ -420,19 +445,37 @@ function RoomChat() {
               </div>
 
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isClutchMoment ? "text-white/80" : "text-secondary/65"
+                  }`}
+                >
                   {gameState.quarterLabel}
                 </p>
-                <p className="mt-0.5 font-barlow-condensed text-[1.35rem] font-semibold leading-none sm:text-[1.8rem]">
+                <p
+                  className={`mt-0.5 font-barlow-condensed font-semibold leading-none sm:text-[1.8rem] ${
+                    isClutchMoment
+                      ? "text-[1.6rem] text-white drop-shadow-[0_3px_14px_rgba(255,255,255,0.18)]"
+                      : "text-[1.35rem]"
+                  }`}
+                >
                   {gameState.clock}
                 </p>
-                <p className="mt-0.5 font-lato text-[0.64rem] font-bold uppercase tracking-[0.18em] text-secondary/70 sm:text-[0.7rem]">
+                <p
+                  className={`mt-0.5 font-lato text-[0.64rem] font-bold uppercase tracking-[0.18em] sm:text-[0.7rem] ${
+                    isClutchMoment ? "text-white/85" : "text-secondary/70"
+                  }`}
+                >
                   {gameState.statusLabel}
                 </p>
               </div>
 
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isClutchMoment ? "text-white/80" : "text-secondary/65"
+                  }`}
+                >
                   {gameState.rightTeam}
                 </p>
                 <p className="font-anton text-[1.75rem] leading-none sm:text-[2.2rem]">
@@ -443,7 +486,11 @@ function RoomChat() {
 
             {gameState.detail && (
               <div className="mt-2 text-center">
-                <p className="font-lato text-[0.68rem] font-semibold text-secondary/75 sm:text-xs">
+                <p
+                  className={`font-lato text-[0.68rem] font-semibold sm:text-xs ${
+                    isClutchMoment ? "text-white/88" : "text-secondary/75"
+                  }`}
+                >
                   {gameState.detail}
                 </p>
               </div>

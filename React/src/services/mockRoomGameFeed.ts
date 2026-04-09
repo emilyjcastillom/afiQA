@@ -15,6 +15,11 @@ export type MockGameSnapshot = {
   highlights: MockGameHighlight[];
 };
 
+type MockGameControlState = {
+  anchorMs: number;
+  offsetSeconds: number;
+};
+
 type TeamKey = "warriors" | "lakers";
 
 type TimelineSegment = {
@@ -280,9 +285,15 @@ const resolvedTimeline = timeline.reduce<ResolvedSegment[]>(
 
 const finalPlayableSecond =
   resolvedTimeline.find((segment) => segment.kind === "final")?.startAt ?? 0;
+const fourthQuarterStartSecond =
+  resolvedTimeline.find(
+    (segment) => segment.kind === "quarter" && segment.quarter === 4
+  )?.startAt ?? 0;
 const finalStateHoldSeconds = 45;
 const matchCycleSeconds = finalPlayableSecond + finalStateHoldSeconds;
 const sharedMatchEpochMs = Date.UTC(2026, 0, 1, 0, 0, 0);
+const mockGameControlStorageKey = "afi.mock-game-control";
+const mockGameControlEvent = "afi:mock-game-control";
 
 function formatClock(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -372,7 +383,10 @@ export function getMockGameSnapshot(second: number): MockGameSnapshot {
 }
 
 function getSharedMatchSecond(nowMs = Date.now()) {
-  const elapsedSeconds = Math.floor((nowMs - sharedMatchEpochMs) / 1000);
+  const controlState = getMockGameControlState();
+  const anchorMs = controlState?.anchorMs ?? sharedMatchEpochMs;
+  const offsetSeconds = controlState?.offsetSeconds ?? 0;
+  const elapsedSeconds = Math.floor((nowMs - anchorMs) / 1000) + offsetSeconds;
   const normalizedSeconds =
     ((elapsedSeconds % matchCycleSeconds) + matchCycleSeconds) %
     matchCycleSeconds;
@@ -380,20 +394,82 @@ function getSharedMatchSecond(nowMs = Date.now()) {
   return Math.min(normalizedSeconds, finalPlayableSecond);
 }
 
+function getMockGameControlState(): MockGameControlState | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = window.localStorage.getItem(mockGameControlStorageKey);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as MockGameControlState;
+    if (
+      typeof parsed.anchorMs !== "number" ||
+      typeof parsed.offsetSeconds !== "number"
+    ) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function updateMockGameControl(offsetSeconds: number) {
+  if (typeof window === "undefined") return;
+
+  const nextState: MockGameControlState = {
+    anchorMs: Date.now(),
+    offsetSeconds,
+  };
+
+  window.localStorage.setItem(
+    mockGameControlStorageKey,
+    JSON.stringify(nextState)
+  );
+  window.dispatchEvent(new CustomEvent(mockGameControlEvent));
+}
+
 export function getCurrentMockGameSnapshot() {
   return getMockGameSnapshot(getSharedMatchSecond());
+}
+
+export function resetMockGame() {
+  updateMockGameControl(0);
+}
+
+export function jumpToMockGameLastQuarter() {
+  updateMockGameControl(fourthQuarterStartSecond);
 }
 
 export function subscribeToMockGameFeed(
   onUpdate: (snapshot: MockGameSnapshot) => void
 ) {
-  onUpdate(getCurrentMockGameSnapshot());
-
-  const intervalId = window.setInterval(() => {
+  const emitSnapshot = () => {
     onUpdate(getCurrentMockGameSnapshot());
+  };
+
+  emitSnapshot();
+  const intervalId = window.setInterval(() => {
+    emitSnapshot();
   }, 1000);
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === mockGameControlStorageKey) {
+      emitSnapshot();
+    }
+  };
+
+  const handleControlUpdate = () => {
+    emitSnapshot();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(mockGameControlEvent, handleControlUpdate);
 
   return () => {
     window.clearInterval(intervalId);
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(mockGameControlEvent, handleControlUpdate);
   };
 }

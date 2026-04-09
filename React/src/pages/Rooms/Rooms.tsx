@@ -5,6 +5,10 @@ import NavBar from "../../components/layout/NavBar";
 import Button from "../../components/ui/Button";
 import { fetchMyRooms } from "../../services/rooms";
 import RoomCard, { type Room } from "../../components/ui/RoomCard";
+import {
+  jumpToMockGameLastQuarter,
+  resetMockGame,
+} from "../../services/mockRoomGameFeed";
 
 type RoomsLocationState = {
   removedRoomId?: number;
@@ -79,6 +83,14 @@ function RoomsPage() {
     navigate(`/rooms/${room.id}/summary`, {
       state: { from: location.pathname },
     });
+  }
+
+  function handleResetGame() {
+    resetMockGame();
+  }
+
+  function handleJumpToLastQuarter() {
+    jumpToMockGameLastQuarter();
   }
 
   return (
@@ -215,6 +227,41 @@ function RoomsPage() {
                 ))}
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-[2rem] bg-surface-container-lowest p-5 shadow-[0_16px_35px_rgba(15,23,42,0.05)] sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="font-lato text-[0.72rem] uppercase tracking-[0.24em] text-primary-3">
+                Mock Game Controls
+              </p>
+              <h2 className="mt-2 font-lato text-xl font-bold text-secondary">
+                Test the live game feed
+              </h2>
+              <p className="mt-1 font-lato text-sm text-on-surface-variant">
+                Use these buttons to restart the mock matchup or jump directly
+                into the last quarter.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                variant="secondary"
+                onClick={handleResetGame}
+                className="rounded-2xl px-5 py-3 font-lato text-sm font-bold"
+              >
+                Reset Game
+              </Button>
+
+              <Button
+                variant="primary"
+                onClick={handleJumpToLastQuarter}
+                className="rounded-2xl px-5 py-3 font-lato text-sm font-bold"
+              >
+                Last Quarter
+              </Button>
+            </div>
           </div>
         </section>
       </main>
