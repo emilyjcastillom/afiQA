@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 export interface UserProfileData {
     username: string;
     avatar_url: string;
+    full_name: string;
 }
 
 export function useProfile() {
@@ -43,7 +44,10 @@ export function useProfile() {
                 setUser(null);
                 setError(profileError);
             } else {
-                setUser(profile);
+                setUser({
+                    ...profile,
+                    full_name: authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? profile.username,
+                });
                 setError(null);
             }
             setLoading(false);
