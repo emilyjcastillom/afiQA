@@ -6,6 +6,16 @@ import Button from "../Button";
 export default function ProductCard({ product }: { product: PricedProduct }) {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addToCartError, setAddToCartError] = useState<string | null>(null);
+  const hasDiscount = product.discount > 0;
+  const discountedPrice = product.price * (1 - product.discount);
+  const formattedPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(product.price);
+  const formattedDiscountedPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(discountedPrice);
 
   const handleAddToCart = async () => {
     try {
@@ -37,9 +47,17 @@ export default function ProductCard({ product }: { product: PricedProduct }) {
         <p className="line-clamp-3 min-h-10 text-sm font-lato ">
           {product.description}
         </p>
-        <p className="mt-auto text-xl font-bold  font-lato">
-          ${product.price.toFixed(2)}
-        </p>
+        {hasDiscount ? (
+          <div className="mt-auto flex items-center gap-2 text-sm">
+            <span className="text-xl font-bold font-lato">{formattedDiscountedPrice}</span>
+            <span className="font-lato text-gray-400 line-through">{formattedPrice}</span>
+            <span className="font-lato text-md font-bold text-red-600">
+              {product.discount * 100}% OFF
+            </span>
+          </div>
+        ) : (
+          <p className="mt-auto text-xl font-bold  font-lato">{formattedPrice}</p>
+        )}
         <Button
           variant="primary"
           onClick={handleAddToCart}
