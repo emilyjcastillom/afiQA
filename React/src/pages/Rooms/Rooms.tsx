@@ -1,171 +1,166 @@
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import NavBar from "../../components/layout/NavBar";
 import Button from "../../components/ui/Button";
+import { fetchMyRooms } from "../../services/rooms";
 import RoomCard, { type Room } from "../../components/ui/RoomCard";
 
-type RoomFilter = "all" | "live" | "offline";
-
-type RoomsLocationState = {
-  createdRoom?: Room;
-};
-
-const initialRooms: Room[] = [
-  {
-    id: 1,
-    title: "Warriors Game Night",
-    status: "live",
-    members: "Cesar, Luis, Maria +2",
-    subtitle: "Luis: That dunk was insane!",
-    accent: "#1D428A",
-  },
-  {
-    id: 2,
-    title: "Lakers Watch Party",
-    members: "Alex, Emma, Mike",
-    subtitle: "Emma: Can't wait for tonight",
-    accent: "#5B2D91",
-  },
-  {
-    id: 3,
-    title: "Playoffs Squad",
-    status: "live",
-    members: "David, Sophie, Tom +3",
-    subtitle: "Tom: LeBron is on fire",
-    accent: "#0E7490",
-  },
-];
-
-function Rooms() {
+function RoomsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [filter, setFilter] = useState<RoomFilter>("all");
-  const [rooms, setRooms] = useState<Room[]>(initialRooms);
+
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [activeFilter, setActiveFilter] = useState<"all" | "live" | "offline">(
+    "all"
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const state = location.state as RoomsLocationState | null;
-    const createdRoom = state?.createdRoom;
+    async function loadRooms() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchMyRooms();
+        setRooms(data);
+      } catch (err) {
+        console.error("Error loading rooms:", err);
+        setError(
+          err instanceof Error ? err.message : "Could not load rooms."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    if (!createdRoom) return;
+    loadRooms();
+  }, []);
 
-    setRooms((current) =>
-      current.some((room) => room.id === createdRoom.id)
-        ? current
-        : [createdRoom, ...current]
-    );
-    setFilter("all");
-    navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state, navigate]);
+  const orderedRooms = useMemo(() => {
+    return [...rooms].sort((a, b) => {
+      if (a.status === "live" && b.status !== "live") return -1;
+      if (a.status !== "live" && b.status === "live") return 1;
+      return a.title.localeCompare(b.title);
+    });
+  }, [rooms]);
 
-  const orderedRooms = [...rooms].sort((a, b) => {
-    if (a.status === "live" && b.status !== "live") return -1;
-    if (a.status !== "live" && b.status === "live") return 1;
-    return 0;
-  });
+  const filteredRooms = useMemo(() => {
+    if (activeFilter === "all") return orderedRooms;
+    return orderedRooms.filter((room) => room.status === activeFilter);
+  }, [orderedRooms, activeFilter]);
 
-  const liveCount = orderedRooms.filter((room) => room.status === "live").length;
-  const offlineCount = orderedRooms.length - liveCount;
-  const filteredRooms = orderedRooms.filter((room) => {
-    if (filter === "live") return room.status === "live";
-    if (filter === "offline") return room.status !== "live";
-    return true;
-  });
+  const liveCount = rooms.filter((room) => room.status === "live").length;
+  const offlineCount = rooms.filter((room) => room.status === "offline").length;
+
+  function handleCreateRoom() {
+    navigate("/rooms/create");
+  }
+
+  function handleRoomAction(room: Room) {
+    if (room.status === "live") {
+      navigate(`/rooms/${room.id}`, { state: { from: location.pathname } });
+      return;
+    }
+
+    navigate(`/rooms/${room.id}/summary`, {
+      state: { from: location.pathname },
+    });
+  }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fbff_0%,_#eef3fb_45%,_#dce6f3_100%)]">
+    <div className="min-h-screen bg-background">
       <NavBar />
 
-      <main className="mx-auto flex min-h-[calc(100vh-72px)] w-full max-w-[1880px] flex-col gap-5 px-3 py-3 sm:px-5 sm:py-6 xl:px-12 2xl:px-16">
-        <header className="px-1 pt-1 sm:px-0">
-          <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.28em] text-secondary/65 sm:text-[0.74rem] lg:text-[0.82rem]">
+      <main className="mx-auto w-full max-w-[1280px] px-6 pb-10 pt-8 lg:px-10">
+        <div className="mb-8">
+          <p className="font-lato text-[0.72rem] uppercase tracking-[0.28em] text-primary-3">
             Fan Community
           </p>
-          <div className="mt-1">
-            <h1 className="font-barlow-condensed text-[2.05rem] font-semibold tracking-[-0.03em] leading-[0.92] text-[#1f3668] sm:text-[2.45rem] lg:text-[3.15rem] xl:text-[3.85rem]">
-              Private Fan Rooms
-            </h1>
-          </div>
-        </header>
+          <h1 className="font-lato text-4xl font-black tracking-tight text-secondary lg:text-5xl">
+            Private Fan Rooms
+          </h1>
+        </div>
 
-        <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)] xl:items-stretch">
-          <div className="rounded-[1.45rem] bg-secondary px-3.5 py-3.5 text-white shadow-[0_20px_50px_rgba(29,66,138,0.28)] sm:px-5 sm:py-5 lg:px-6 lg:py-6 xl:min-h-[460px] xl:rounded-[2rem]">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-start xl:grid-cols-1 xl:gap-4">
-
-              <div className="rounded-[1.15rem] border border-white/12 bg-white/8 p-3 backdrop-blur-sm sm:rounded-[1.35rem] sm:p-4 lg:p-5 xl:mt-6 xl:rounded-[1.75rem] xl:p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-lato text-[0.62rem] uppercase tracking-[0.18em] text-white/65 sm:text-xs lg:text-sm">
-                      Create Room
-                    </p>
-                    <h2 className="mt-2 font-lato text-[1rem] font-bold text-white sm:text-[1.22rem] lg:text-[1.5rem] xl:text-[2rem]">
-                      Start a new watch party
-                    </h2>
-                    <p className="mt-2 max-w-sm font-lato text-[0.76rem] leading-5 text-white/76 sm:text-[0.9rem] lg:text-[1rem] lg:leading-7 xl:max-w-sm xl:text-[1.08rem] xl:leading-8">
-                      Open a new private room for live reactions, predictions, and
-                      game-day chat.
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] bg-primary text-secondary shadow-[0_12px_24px_rgba(255,199,44,0.28)] sm:h-12 sm:w-12 sm:rounded-2xl lg:h-13 lg:w-13 xl:h-14 xl:w-14">
-                    <PlusIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-                  </div>
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="rounded-[2rem] bg-secondary p-4 shadow-[0_20px_45px_rgba(29,66,138,0.18)]">
+            <div className="rounded-[1.55rem] border border-white/10 bg-white/10 p-4 text-white sm:p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-lato text-[0.68rem] uppercase tracking-[0.24em] text-white/70">
+                    Create Room
+                  </p>
+                  <h2 className="mt-2 font-lato text-[2rem] font-black leading-[1.05]">
+                    Start a new
+                    <br />
+                    watch party
+                  </h2>
                 </div>
 
-                <Button
-                  variant="primary"
-                  onClick={() => navigate("/rooms/create")}
-                  className="mt-3 w-full rounded-xl border-transparent py-2 text-[0.9rem] font-bold text-secondary sm:mt-4 sm:py-3 sm:text-[0.95rem] lg:py-3.5 lg:text-base xl:py-4 xl:text-lg"
-                >
-                  Create Room
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[1.7rem] bg-white/88 p-4 shadow-[0_24px_70px_rgba(30,41,59,0.12)] backdrop-blur-sm sm:p-5 xl:min-h-[460px] xl:rounded-[2rem] xl:p-8">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <p className="font-lato text-[1.02rem] font-bold text-[#1c2434] sm:text-[1.08rem] lg:text-[1.28rem] xl:text-[1.55rem]">
-                  Your Rooms
-                </p>
-                <p className="mt-1 font-lato text-[0.88rem] text-[#7d8797] sm:text-[0.95rem] lg:text-[1.05rem] xl:text-[1.15rem]">
-                  {filteredRooms.length} of {orderedRooms.length} conversations visible
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="hidden rounded-full bg-[#eef4ff] px-4 py-2 font-lato text-sm font-bold text-secondary lg:block xl:px-5 xl:py-2.5 xl:text-base">
-                  Live watch parties
-                </div>
                 <button
-                  type="button"
-                  onClick={() => setFilter("all")}
-                  className={`rounded-full px-4 py-2 font-lato text-[0.84rem] font-bold transition-colors sm:text-sm lg:px-5 lg:py-2.5 lg:text-base xl:text-[1.02rem] ${
-                    filter === "all"
+                  onClick={handleCreateRoom}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f7c62f] text-[#1d2d5c] shadow-[0_10px_24px_rgba(247,198,47,0.45)] transition hover:brightness-95"
+                  aria-label="Create room"
+                >
+                  <PlusIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <p className="font-lato text-sm leading-6 text-white/80">
+                Open a new private room for live reactions, predictions, and
+                game-day chat.
+              </p>
+
+              <Button
+                variant="primary"
+                onClick={handleCreateRoom}
+                className="mt-6 w-full rounded-2xl border-none bg-[#f7c62f] px-4 py-3 font-lato text-sm font-bold text-[#172b5b] hover:brightness-95"
+              >
+                Create Room
+              </Button>
+            </div>
+          </aside>
+
+          <div className="rounded-[2rem] bg-surface-container-lowest p-6 shadow-[0_20px_40px_rgba(15,23,42,0.06)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="font-lato text-2xl font-bold text-on-surface">
+                  Your Rooms
+                </h2>
+                <p className="mt-1 font-lato text-sm text-on-surface-variant">
+                  {filteredRooms.length} of {rooms.length} conversations visible
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setActiveFilter("all")}
+                  className={`rounded-full px-4 py-2 font-lato text-sm font-bold transition ${
+                    activeFilter === "all"
                       ? "bg-secondary text-white"
-                      : "bg-[#f1f4f9] text-[#64748b]"
+                      : "bg-surface-container text-on-surface-variant"
                   }`}
                 >
                   All
                 </button>
+
                 <button
-                  type="button"
-                  onClick={() => setFilter("live")}
-                  className={`rounded-full px-4 py-2 font-lato text-[0.84rem] font-bold transition-colors sm:text-sm lg:px-5 lg:py-2.5 lg:text-base xl:text-[1.02rem] ${
-                    filter === "live"
-                      ? "bg-[#ff4d57] text-white"
-                      : "bg-[#fff1f2] text-[#ff4d57]"
+                  onClick={() => setActiveFilter("live")}
+                  className={`rounded-full px-4 py-2 font-lato text-sm font-bold transition ${
+                    activeFilter === "live"
+                      ? "bg-[#ffe7ea] text-[#ff4d57]"
+                      : "bg-surface-container text-on-surface-variant"
                   }`}
                 >
                   Live ({liveCount})
                 </button>
+
                 <button
-                  type="button"
-                  onClick={() => setFilter("offline")}
-                  className={`rounded-full px-4 py-2 font-lato text-[0.84rem] font-bold transition-colors sm:text-sm lg:px-5 lg:py-2.5 lg:text-base xl:text-[1.02rem] ${
-                    filter === "offline"
-                      ? "bg-[#8893a5] text-white"
-                      : "bg-[#f1f4f8] text-[#7b8798]"
+                  onClick={() => setActiveFilter("offline")}
+                  className={`rounded-full px-4 py-2 font-lato text-sm font-bold transition ${
+                    activeFilter === "offline"
+                      ? "bg-[#e9edf5] text-[#667085]"
+                      : "bg-surface-container text-on-surface-variant"
                   }`}
                 >
                   Offline ({offlineCount})
@@ -173,35 +168,45 @@ function Rooms() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-              {filteredRooms.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  onActionClick={(selectedRoom) => {
-                    if (selectedRoom.status !== "live") return;
-                    navigate("/rooms/chat", { state: { room: selectedRoom } });
-                  }}
-                />
-              ))}
-            </div>
+            {loading && (
+              <div className="mt-8 rounded-2xl bg-surface-container px-4 py-6 text-center font-lato text-on-surface-variant">
+                Loading rooms...
+              </div>
+            )}
 
-            {filteredRooms.length === 0 && (
-              <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#c9d6e8] bg-[#f7faff] px-5 py-8 text-center">
-                <p className="font-lato text-lg font-bold text-[#28406a] xl:text-xl">
-                  No rooms in this filter
+            {error && (
+              <div className="mt-8 rounded-2xl bg-[#fff1f2] px-4 py-6 text-center font-lato text-[#be123c]">
+                {error}
+              </div>
+            )}
+
+            {!loading && !error && filteredRooms.length === 0 && (
+              <div className="mt-8 rounded-2xl bg-surface-container px-4 py-8 text-center">
+                <p className="font-lato text-base font-semibold text-on-surface">
+                  No rooms yet
                 </p>
-                <p className="mt-2 font-lato text-base text-[#7b8798] xl:text-lg">
-                  Switch between Live and Offline to preview the different chat states.
+                <p className="mt-2 font-lato text-sm text-on-surface-variant">
+                  Create your first room to start chatting with friends.
                 </p>
+              </div>
+            )}
+
+            {!loading && !error && filteredRooms.length > 0 && (
+              <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {filteredRooms.map((room) => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    onActionClick={handleRoomAction}
+                  />
+                ))}
               </div>
             )}
           </div>
         </section>
-
       </main>
     </div>
   );
 }
 
-export default Rooms;
+export default RoomsPage;
