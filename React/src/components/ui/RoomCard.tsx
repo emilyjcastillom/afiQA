@@ -5,7 +5,7 @@ import Card from "./Card";
 export type Room = {
   id: number;
   title: string;
-  status?: "live";
+  status: "live" | "offline";
   members: string;
   subtitle: string;
   accent: string;
