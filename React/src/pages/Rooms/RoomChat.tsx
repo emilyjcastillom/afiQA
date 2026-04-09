@@ -9,6 +9,8 @@ import type { Room } from "../../components/ui/RoomCard";
 import {
   fetchRoomChat,
   fetchRoomMessages,
+  leaveRoom,
+  ROOM_SYSTEM_MESSAGE_PREFIX,
   sendRoomMessage,
   subscribeToRoomMessages,
   type RoomChatMessageRecord,
@@ -73,13 +75,21 @@ function toDisplayMessage(
   currentUserId: string
 ): ChatMessage {
   const createdAt = new Date(message.createdAt);
+  const isSystemMessage = message.content.startsWith(ROOM_SYSTEM_MESSAGE_PREFIX);
+  const displayText = isSystemMessage
+    ? message.content.replace(ROOM_SYSTEM_MESSAGE_PREFIX, "")
+    : message.content;
 
   return {
     id: message.id,
-    sender: message.senderName,
-    text: message.content,
-    time: formatMessageTime(createdAt),
-    align: message.senderProfileId === currentUserId ? "right" : "left",
+    sender: isSystemMessage ? "System" : message.senderName,
+    text: displayText,
+    time: isSystemMessage ? "" : formatMessageTime(createdAt),
+    align: isSystemMessage
+      ? "center"
+      : message.senderProfileId === currentUserId
+        ? "right"
+        : "left",
     createdAt: createdAt.getTime(),
   };
 }
@@ -113,6 +123,7 @@ function RoomChat() {
   const [room, setRoom] = useState<Room>(state?.room ?? defaultRoom);
   const [draft, setDraft] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [predictionOpen, setPredictionOpen] = useState(true);
   const [predictionCountdown, setPredictionCountdown] = useState(predictionBaseSeconds);
@@ -122,8 +133,10 @@ function RoomChat() {
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [leavingRoom, setLeavingRoom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedPredictionRef = useRef<PredictionSelection | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
 
   const scoreboard = useMemo(() => scoreSeed(room), [room]);
 
@@ -169,6 +182,22 @@ function RoomChat() {
   useEffect(() => {
     selectedPredictionRef.current = selectedPrediction;
   }, [selectedPrediction]);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        actionsMenuRef.current &&
+        !actionsMenuRef.current.contains(event.target as Node)
+      ) {
+        setActionsOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsOpen]);
 
   useEffect(() => {
     if (!predictionOpen) return;
@@ -292,6 +321,39 @@ function RoomChat() {
     setPredictionOpen(false);
   }
 
+  function handleToggleInfo() {
+    setInfoOpen((current) => !current);
+    setActionsOpen(false);
+  }
+
+  async function handleLeaveRoom() {
+    if (!activeRoomId || leavingRoom) return;
+
+    const confirmed = window.confirm(
+      "Leave this group? It will no longer appear in your rooms list."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLeavingRoom(true);
+      setChatError(null);
+      await leaveRoom(activeRoomId);
+      navigate("/rooms", {
+        replace: true,
+        state: { removedRoomId: activeRoomId },
+      });
+    } catch (error) {
+      console.error("Error leaving room:", error);
+      setChatError(
+        error instanceof Error ? error.message : "Could not leave room."
+      );
+    } finally {
+      setLeavingRoom(false);
+      setActionsOpen(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fbff_0%,_#eef3fb_48%,_#dce6f3_100%)]">
       <main className="flex h-screen w-full flex-col">
@@ -316,14 +378,37 @@ function RoomChat() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                aria-label="Toggle match info"
-                onClick={() => setInfoOpen((current) => !current)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/18"
-              >
-                <InformationCircleIcon className="h-5 w-5" />
-              </button>
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  type="button"
+                  aria-label="Room actions"
+                  onClick={() => setActionsOpen((current) => !current)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/18"
+                >
+                  <InformationCircleIcon className="h-5 w-5" />
+                </button>
+
+                {actionsOpen && (
+                  <div className="absolute right-0 top-11 z-20 w-48 rounded-2xl border border-[#d6e0f0] bg-white p-2 shadow-[0_18px_36px_rgba(15,23,42,0.14)]">
+                    <button
+                      type="button"
+                      onClick={handleToggleInfo}
+                      className="flex w-full rounded-xl px-3 py-2 text-left font-lato text-sm font-semibold text-[#29477b] transition-colors hover:bg-[#eef4ff]"
+                    >
+                      {infoOpen ? "Hide Match Info" : "Show Match Info"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLeaveRoom}
+                      disabled={leavingRoom}
+                      className="mt-1 flex w-full rounded-xl px-3 py-2 text-left font-lato text-sm font-semibold text-[#c1124a] transition-colors hover:bg-[#fff1f4] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {leavingRoom ? "Leaving..." : "Leave Group"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

@@ -6,9 +6,14 @@ import Button from "../../components/ui/Button";
 import { fetchMyRooms } from "../../services/rooms";
 import RoomCard, { type Room } from "../../components/ui/RoomCard";
 
+type RoomsLocationState = {
+  removedRoomId?: number;
+};
+
 function RoomsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const state = location.state as RoomsLocationState | null;
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeFilter, setActiveFilter] = useState<"all" | "live" | "offline">(
@@ -35,7 +40,15 @@ function RoomsPage() {
     }
 
     loadRooms();
-  }, []);
+  }, [location.key]);
+
+  useEffect(() => {
+    if (!state?.removedRoomId) return;
+
+    setRooms((current) =>
+      current.filter((room) => room.id !== state.removedRoomId)
+    );
+  }, [state?.removedRoomId]);
 
   const orderedRooms = useMemo(() => {
     return [...rooms].sort((a, b) => {
