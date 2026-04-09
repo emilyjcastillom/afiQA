@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import CartItem from "../ui/shop/CartItem";
 import { useCart } from "../../hooks/useCart";
@@ -26,6 +27,22 @@ export default function Cart({ isOpen, onClose }: CartProps) {
     error: cartError,
   } = useCart();
 
+  useEffect(() => {
+    const { body, documentElement } = document;
+    const originalBodyOverflow = body.style.overflow;
+    const originalHtmlOverflow = documentElement.style.overflow;
+
+    if (isOpen) {
+      body.style.overflow = "hidden";
+      documentElement.style.overflow = "hidden";
+    }
+
+    return () => {
+      body.style.overflow = originalBodyOverflow;
+      documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -37,7 +54,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
         onClick={onClose}
       />
 
-      <aside className="absolute inset-0 flex flex-col bg-white md:inset-y-0 md:right-0 md:left-auto md:w-full md:max-w-md md:border-l md:border-black/10 md:shadow-2xl">
+      <aside className="absolute inset-0 flex h-full flex-col overflow-hidden bg-white md:inset-y-0 md:right-0 md:left-auto md:w-full md:max-w-md md:border-l md:border-black/10 md:shadow-2xl">
         <div className="flex items-center justify-between border-b border-black/10 px-6 py-5">
           <h2 className="text-2xl font-anton font-semibold md:text-3xl">Shopping Cart</h2>
           <button
@@ -49,27 +66,29 @@ export default function Cart({ isOpen, onClose }: CartProps) {
           </button>
         </div>
 
-        {loadingCart ? (
-          <div className="flex flex-col gap-4 p-6">
-            <CartSkeleton />
-            <CartSkeleton />
-            <CartSkeleton />
-          </div>
-        ) : cartError ? (
-          <div className="flex flex-1 items-center justify-center px-6 text-center font-lato text-lg text-red-600">
-            Error loading cart. Please try again.
-          </div>
-        ) : cartItems.length > 0 ? (
-          <div className="flex flex-col gap-4 p-6">
-            {cartItems.map((item) => (
-              <CartItem key={item.id} {...item} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center px-6 text-center font-lato text-lg text-black/70">
-            Your cart is empty for now.
-          </div>
-        )}
+        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
+          {loadingCart ? (
+            <div className="flex flex-col gap-4 p-6">
+              <CartSkeleton />
+              <CartSkeleton />
+              <CartSkeleton />
+            </div>
+          ) : cartError ? (
+            <div className="flex min-h-full items-center justify-center px-6 text-center font-lato text-lg text-red-600">
+              Error loading cart. Please try again.
+            </div>
+          ) : cartItems.length > 0 ? (
+            <div className="flex flex-col gap-4 p-6">
+              {cartItems.map((item) => (
+                <CartItem key={item.id} {...item} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-full items-center justify-center px-6 text-center font-lato text-lg text-black/70">
+              Your cart is empty for now.
+            </div>
+          )}
+        </div>
 
       </aside>
     </div>

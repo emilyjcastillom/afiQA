@@ -43,7 +43,7 @@ export default function ShopProducts() {
 
   return (<>
     <NavBar />
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 p-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-6 p-6 sm:grid-cols-3 lg:grid-cols-4 bg-secondary/15">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
