@@ -7,6 +7,18 @@ import ShopSeparator from "../components/ui/shop/Separator";
 import SearchBar from "../components/layout/Shop/SearchBar";
 import { useNavigate } from "react-router-dom";
 
+function ProductGroupCardSkeleton() {
+  return (
+    <div className="flex shrink-0 flex-col justify-between p-4 text-start">
+      <div className="mb-4 h-90 w-52 animate-pulse rounded bg-gray-200 md:h-120 md:w-72" />
+      <div className="flex flex-col gap-2">
+        <div className="h-8 w-40 animate-pulse rounded bg-gray-200 md:h-10" />
+        <div className="h-5 w-28 animate-pulse rounded bg-gray-200 md:h-6" />
+      </div>
+    </div>
+  );
+}
+
 
 export default function Shop() {
   const navigate = useNavigate();
@@ -32,12 +44,12 @@ export default function Shop() {
   } = useCategories();
   const { 
     collections, 
-    //loading: collectionsLoading, 
+    loading: collectionsLoading, 
     //error: collectionsError 
   } = useCollections();
   const { 
     players, 
-    //loading: playersLoading, 
+    loading: playersLoading, 
     //error: playersError 
   } = usePlayers();
  
@@ -61,29 +73,33 @@ export default function Shop() {
 
 <h2 className=" px-6 pt-10 text-3xl md:text-4xl font-bold text-black font-anton md:px-8">Shop by Player</h2>
   <ShopCarousel>
-    {players.map(player => (
-      <ProductGroupCard
-        key={player.name}
-        title={player.name}
-        description={`#${player.number} - ${player.position}`}
-        imageUrl={player.image_url}
-        onClick={() => navigateToProducts("player", player.name)}
-      />
-    ))}
+    {playersLoading
+      ? Array.from({ length: 4 }).map((_, index) => <ProductGroupCardSkeleton key={index} />)
+      : players.map(player => (
+          <ProductGroupCard
+            key={player.name}
+            title={player.name}
+            description={`#${player.number} - ${player.position}`}
+            imageUrl={player.image_url}
+            onClick={() => navigateToProducts("player", player.name)}
+          />
+        ))}
   </ShopCarousel>
 
   <ShopSeparator message="Complete your fit with exclusive team collections" />
 
   <h2 className=" px-6 pt-10 text-3xl md:text-4xl font-bold text-black font-anton md:px-8">Our Collections</h2>
   <ShopCarousel>
-    {collections.map(collection => (
-      <ProductGroupCard
-        key={collection.name}
-        title={collection.name}
-        imageUrl={collection.image_url}
-        onClick={() => navigateToProducts("collection", collection.name)}
-      />
-    ))}
+    {collectionsLoading
+      ? Array.from({ length: 4 }).map((_, index) => <ProductGroupCardSkeleton key={index} />)
+      : collections.map(collection => (
+          <ProductGroupCard
+            key={collection.name}
+            title={collection.name}
+            imageUrl={collection.image_url}
+            onClick={() => navigateToProducts("collection", collection.name)}
+          />
+        ))}
   </ShopCarousel>
  
 
