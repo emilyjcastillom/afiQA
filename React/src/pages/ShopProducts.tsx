@@ -58,30 +58,6 @@ export default function ShopProducts() {
     error: productsError 
   } = useShopProducts({ searchQuery, filters });
 
-  if (productsLoading) {
-    return (
-      <div className="flex min-h-screen flex-col bg-secondary/15">
-        <NavBar />
-        <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(theme(spacing.60),1fr))] gap-6 p-6">
-          <ProductsSkeleton />
-          <ProductsSkeleton />
-          <ProductsSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  if (productsError) {
-    return (
-      <div className="flex min-h-screen flex-col bg-secondary/15">
-        <NavBar />
-        <div className="flex items-center justify-center px-6 py-10 text-center font-lato text-lg text-red-600">
-          Error loading products. Please try again.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen flex-col bg-secondary/15">
       <NavBar />
@@ -98,11 +74,23 @@ export default function ShopProducts() {
           onKeyDown={handleSearchKeyDown}
         />
       </div>
-      <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(theme(spacing.60),1fr))] gap-6 p-6">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {productsLoading ? (
+        <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(theme(spacing.60),1fr))] gap-6 p-6">
+          <ProductsSkeleton />
+          <ProductsSkeleton />
+          <ProductsSkeleton />
+        </div>
+      ) : productsError ? (
+        <div className="flex items-center justify-center px-6 py-10 text-center font-lato text-lg text-red-600">
+          Error loading products. Please try again.
+        </div>
+      ) : (
+        <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(theme(spacing.60),1fr))] gap-6 p-6">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
         </div>
       </div>
       

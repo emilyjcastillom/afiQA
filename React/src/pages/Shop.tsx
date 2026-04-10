@@ -33,7 +33,7 @@ export default function Shop() {
       <button
         key={category.name}
         onClick={() => console.log(`Category ${category.name} clicked`)}
-        className="shrink-0 rounded-full border border-black px-4 py-2 font-lato text-sm font-semibold uppercase text-black transition-colors hover:bg-black hover:text-white"
+        className="shrink-0 rounded-full border border-black px-4 py-2 font-lato text-sm font-semibold uppercase text-black transition-colors hover:bg-secondary hover:text-primary hover:border-secondary"
       >
         {category.name}
       </button>
