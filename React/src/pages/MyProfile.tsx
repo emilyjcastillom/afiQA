@@ -8,7 +8,10 @@ import {
   UserIcon,
   TrophyIcon,
   ClockIcon,
+  PencilIcon,
+  CheckIcon
 } from "@heroicons/react/24/solid";
+
 import {
   HandThumbUpIcon as HandThumbUpOutline,
   StarIcon as StarOutline,
@@ -23,6 +26,7 @@ function getLeague(coins: number): { name: string; emoji: string } {
   if (coins <= 20000) return { name: "Sapphire", emoji: "♦️" };
   return { name: "Diamond", emoji: "💎" };
 }
+
 export default function MyProfile() {
   const { user } = useProfile();
   const handle = user?.username ?? "username";
@@ -30,13 +34,19 @@ export default function MyProfile() {
   const league = getLeague(user?.fanatic_coins ?? 0);
 
   const [aboutText, setAboutText] = useState<string>("Let us get to know you! Write a short bio about yourself.");
-
   useEffect(() => {
     if (user?.caption) {
       setAboutText(user.caption);
     }
   }, [user]);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [nameText, setNameText] = useState<string>("");
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  useEffect(() => {
+    if (user?.full_name) setNameText(user.full_name);
+  }, [user]);
 
   const handleEditSave = async () => {
     if (isEditing) {
@@ -47,6 +57,19 @@ export default function MyProfile() {
       setIsEditing(false);
     } else {
       setIsEditing(true);
+    }
+  };
+
+  const handleEditName = async () => {
+    if (isEditingName) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      await supabase
+        .from("profiles")
+        .update({ name: nameText })
+        .eq("id", authUser?.id ?? "");
+      setIsEditingName(false);
+    } else {
+      setIsEditingName(true);
     }
   };
 
@@ -69,7 +92,29 @@ export default function MyProfile() {
                   <UserIcon className="h-11 w-11 text-white" />
                 )}
               </div>
-              <h1 className="text-2xl font-extrabold text-white mb-2">{name}</h1>
+              <div className="flex items-center gap-2 mb-5">
+                {isEditingName ? (
+                  <input
+                    type="text"
+                    value={nameText}
+                    onChange={(e) => setNameText(e.target.value)}
+                    maxLength={50}
+                    className="bg-transparent border-b border-white/50 text-2xl font-extrabold text-white outline-none text-center"
+                    autoFocus
+                  />
+                ) : (
+                  <h1 className="text-2xl font-extrabold text-white mb-0">{nameText}</h1>
+                )}
+                <button
+                  className="p-1 rounded-full hover:bg-white/10 transition-colors"
+                  onClick={handleEditName}
+                >
+                  {isEditingName
+                    ? <CheckIcon className="h-4 w-4 text-white/70" />
+                    : <PencilIcon className="h-4 w-4 text-white/50" />
+                  }
+                </button>
+              </div>
               <p className="text-sm text-white/80">@{handle}</p>
             </div>
 
