@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import NavBar from "../components/layout/NavBar";
 import { useProfile } from "../hooks/useProfile";
 import { supabase } from "../lib/supabaseClient";
+import AvatarUpload from "../components/ui/AvatarUpload";
 import {
   FireIcon,
   StarIcon,
-  UserIcon,
   TrophyIcon,
   ClockIcon,
   PencilIcon,
@@ -28,7 +28,7 @@ function getLeague(coins: number): { name: string; emoji: string } {
 }
 
 export default function MyProfile() {
-  const { user } = useProfile();
+  const { user, refreshProfile } = useProfile();
   const handle = user?.username ?? "username";
   const league = getLeague(user?.fanatic_coins ?? 0);
 
@@ -73,7 +73,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-text">
+    <div className="min-h-screen bg-[var(--color-background)] text-text font-[family-name:var(--font-lato)]">
       <NavBar />
 
       <main className="w-full px-4 pb-10 pt-5 md:px-8 lg:px-12">
@@ -84,14 +84,14 @@ export default function MyProfile() {
 
             {/* Header azul — avatar + nombre */}
             <div className="bg-secondary flex flex-col items-center justify-center text-center px-10 py-8 md:w-80 md:shrink-0 md:rounded-l-2xl">
-              <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-secondary/60 border-4 border-white/20 mb-3 overflow-hidden">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt="Avatar" className="h-[88px] w-[88px] rounded-full object-cover" />
-                ) : (
-                  <UserIcon className="h-11 w-11 text-white" />
-                )}
+              <div className="mb-3">
+                <AvatarUpload
+                  avatarUrl={user?.avatar_url}
+                  userId={user?.id ?? ""}
+                  onUploadSuccess={() => refreshProfile()}
+                />
               </div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1">
                 {isEditingName ? (
                   <input
                     type="text"
@@ -125,7 +125,7 @@ export default function MyProfile() {
                     <FireIcon className="h-5 w-5 text-primary" />
                   </div>
                   <p className="text-xl font-extrabold text-secondary">{user?.streak ?? 0}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Streak</p>
+                  <p className="text-[12px] uppercase tracking-wide text-gray-400 font-semibold">Streak</p>
                 </div>
 
                 <div className="flex flex-col items-center rounded-xl border border-[var(--color-container-border)] shadow-sm bg-[var(--color-background)] p-3">
@@ -133,7 +133,7 @@ export default function MyProfile() {
                     <StarIcon className="h-5 w-5 text-white" />
                   </div>
                   <p className="text-xl font-extrabold text-secondary">{user?.fanatic_coins ?? 0}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Points</p>
+                  <p className="text-[12px] uppercase tracking-wide text-gray-400 font-semibold">Points</p>
                 </div>
 
                 <div className="flex flex-col items-center rounded-xl border border-[var(--color-container-border)] shadow-sm bg-[var(--color-background)] p-3">
@@ -141,7 +141,7 @@ export default function MyProfile() {
                   <TrophyIcon className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-xl font-extrabold text-secondary">{league.emoji}</p>
-                <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">{league.name}</p>
+                <p className="text-[12px] uppercase tracking-wide text-gray-400 font-semibold">{league.name}</p>
               </div>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function MyProfile() {
           {/* About me */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2 px-1">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-text)]">About me</h2>
+              <h2 className="text-[14px] font-bold uppercase tracking-widest text-[var(--color-text)]">About me</h2>
               <button
                 className="text-xs font-bold text-secondary"
                 onClick={handleEditSave}
@@ -188,7 +188,7 @@ export default function MyProfile() {
           {/* Achievements */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2 px-1">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-text)]">Achievements</h2>
+              <h2 className="text-[14px] font-bold uppercase tracking-widest text-[var(--color-text)]">Achievements</h2>
               <button className="text-xs font-bold text-secondary">View All</button>
             </div>
             <section className="rounded-2xl border border-gray-200 bg-[var(--color-text-light-soft)] p-4 h-[calc(100%-28px)]">
@@ -214,7 +214,7 @@ export default function MyProfile() {
 
         {/* Points History */}
         <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-text)]">Points History</h2>
+          <h2 className="text-[14px] font-bold uppercase tracking-widest text-[var(--color-text)]">Points History</h2>
           <button className="text-xs font-bold text-secondary">See All</button>
         </div>
         <section className="rounded-2xl border border-gray-200 bg-[var(--color-text-light-soft)] p-4">
