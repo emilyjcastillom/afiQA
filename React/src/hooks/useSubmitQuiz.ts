@@ -57,23 +57,28 @@ export function useSubmitQuiz() {
 
       const optionIds = answers.map((answer) => answer.option_id);
 
-      const { data: optionsData, error: optionsError } = await supabase
-        .from("quiz_options")
-        .select("id, question_id, result_id")
-        .in("id", optionIds);
+      const { data: optionResultMapData, error: optionResultMapError } = await supabase
+        .from("option_result_map")
+        .select("option_id, result_id")
+        .in("option_id", optionIds);
 
-      if (optionsError) throw optionsError;
+      if (optionResultMapError) throw optionResultMapError;
 
-      const optionsMap = (optionsData || []).reduce((acc: any, option: any) => {
-        acc[option.id] = option;
-        return acc;
-      }, {});
+      const optionToResultsMap = (optionResultMapData || []).reduce(
+        (acc: Record<string, string[]>, row: any) => {
+          if (!acc[row.option_id]) {
+            acc[row.option_id] = [];
+          }
+          acc[row.option_id].push(row.result_id);
+          return acc;
+        },
+        {}
+      );
 
       const answerRows = answers.map((answer) => ({
         attempt_id: attempt.id,
         question_id: answer.question_id,
         option_id: answer.option_id,
-        result_id: optionsMap[answer.option_id]?.result_id,
       }));
 
       const { error: answersError } = await supabase
@@ -84,9 +89,12 @@ export function useSubmitQuiz() {
 
       const counts: Record<string, number> = {};
 
-      for (const row of answerRows) {
-        if (!row.result_id) continue;
-        counts[row.result_id] = (counts[row.result_id] || 0) + 1;
+      for (const answer of answers) {
+        const resultIds = optionToResultsMap[answer.option_id] || [];
+
+        for (const resultId of resultIds) {
+          counts[resultId] = (counts[resultId] || 0) + 1;
+        }
       }
 
       const sortedResults = Object.entries(counts).sort((a, b) => b[1] - a[1]);

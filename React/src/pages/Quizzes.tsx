@@ -112,12 +112,12 @@ function Quizzes() {
     if (!selectedQuiz) return;
 
     const answers = Object.entries(selectedAnswers).map(([question_id, option_id]) => ({
-      question_id,
-      option_id,
+      question_id: Number(question_id),
+      option_id: Number(option_id),
     }));
 
     const result = await submitQuiz({
-      quiz_id: selectedQuiz.id,
+      quiz_id: Number(selectedQuiz.id),
       answers,
     });
 
