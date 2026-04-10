@@ -8,6 +8,7 @@ export interface UserProfileData {
     fanatic_coins: number;
     caption: string | null;
     streak: number;
+    name: string | null;
 }
 
 export function useProfile() {
@@ -36,7 +37,7 @@ export function useProfile() {
                 return;
             }
 
-            const { data: profile, error: profileError } = await supabase
+            const { error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', authUser.id)
@@ -51,16 +52,22 @@ export function useProfile() {
                 await supabase.rpc("update_login_streak", { user_id: authUser.id });
 
                 // Luego vuelve a leer el perfil actualizado (o haz el select de nuevo)
-                const { data: profile, error: profileError } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", authUser.id)
-                .single();
-                setUser({
-                    ...profile,
-                    full_name: profile.name ?? profile.username,
-                });
-                setError(null);
+                const { data: updatedProfile, error: updatedError } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", authUser.id)
+                    .single();
+
+                if (updatedError) {
+                    setUser(null);
+                    setError(updatedError);
+                } else {
+                    setUser({
+                    ...updatedProfile,
+                    full_name: updatedProfile.name ?? updatedProfile.username,
+                    });
+                    setError(null);
+                }
             }
             setLoading(false);
             setHasLoadedOnce(true);

@@ -30,7 +30,6 @@ function getLeague(coins: number): { name: string; emoji: string } {
 export default function MyProfile() {
   const { user } = useProfile();
   const handle = user?.username ?? "username";
-  const name = user?.full_name ?? user?.username ?? "Full Name";
   const league = getLeague(user?.fanatic_coins ?? 0);
 
   const [aboutText, setAboutText] = useState<string>("Let us get to know you! Write a short bio about yourself.");
@@ -45,7 +44,7 @@ export default function MyProfile() {
   const [isEditingName, setIsEditingName] = useState(false);
 
   useEffect(() => {
-    if (user?.full_name) setNameText(user.full_name);
+    if (user?.name) setNameText(user.name);
   }, [user]);
 
   const handleEditSave = async () => {
@@ -92,7 +91,7 @@ export default function MyProfile() {
                   <UserIcon className="h-11 w-11 text-white" />
                 )}
               </div>
-              <div className="flex items-center gap-2 mb-5">
+              <div className="flex items-center gap-2 mb-2">
                 {isEditingName ? (
                   <input
                     type="text"
