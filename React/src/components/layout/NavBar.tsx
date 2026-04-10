@@ -17,7 +17,6 @@ export default function NavBar() {
                 <button
                     type="button"
                     onClick={() => navigate("/myprofile")}
-                    className="rounded-full focus:outline-none focus:ring-2 focus:ring-white"
                 >
                     {user?.avatar_url ? (
                         <img
