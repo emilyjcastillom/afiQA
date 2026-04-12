@@ -9,16 +9,24 @@ import type { Room } from "../../components/ui/RoomCard";
 import {
   fetchRoomChat,
   fetchRoomMessages,
+  leaveRoom,
+  parseRoomPredictionEntry,
+  ROOM_SYSTEM_MESSAGE_PREFIX,
   sendRoomMessage,
+  sendRoomPrediction,
   subscribeToRoomMessages,
   type RoomChatMessageRecord,
+  type RoomPredictionEntryRecord,
 } from "../../services/roomChat";
 import {
-  buildPredictionAnnouncement,
+  getCurrentMockGameSnapshot,
+  getMockPredictionState,
   predictionOptions,
+  subscribeToMockGameFeed,
+  type MockGameSnapshot,
+  type MockPredictionState,
   type PredictionOption,
-  type PredictionSelection,
-} from "./chatPredictionMock";
+} from "../../services/mockRoomGameFeed";
 
 type ChatLocationState = {
   room?: Room;
@@ -43,24 +51,6 @@ const defaultRoom: Room = {
   accent: "#1D428A",
 };
 
-const gameHighlights = [
-  { time: "8:41", text: "Curry hits a 3-pointer!" },
-  { time: "8:39", text: "Davis with the dunk!" },
-  { time: "8:36", text: "Big steal by Wiggins" },
-  { time: "8:33", text: "Green grabs the offensive board" },
-  { time: "8:29", text: "Reaves answers with a corner three" },
-];
-
-function scoreSeed(room: Room) {
-  const base = room.id % 13;
-  return {
-    leftScore: 96 + base,
-    rightScore: 90 + (base % 7),
-    quarter: "4th",
-    time: "8:42",
-  };
-}
-
 function formatMessageTime(date: Date) {
   return date.toLocaleTimeString([], {
     hour: "numeric",
@@ -73,13 +63,21 @@ function toDisplayMessage(
   currentUserId: string
 ): ChatMessage {
   const createdAt = new Date(message.createdAt);
+  const isSystemMessage = message.content.startsWith(ROOM_SYSTEM_MESSAGE_PREFIX);
+  const displayText = isSystemMessage
+    ? message.content.replace(ROOM_SYSTEM_MESSAGE_PREFIX, "")
+    : message.content;
 
   return {
     id: message.id,
-    sender: message.senderName,
-    text: message.content,
-    time: formatMessageTime(createdAt),
-    align: message.senderProfileId === currentUserId ? "right" : "left",
+    sender: isSystemMessage ? "System" : message.senderName,
+    text: displayText,
+    time: isSystemMessage ? "" : formatMessageTime(createdAt),
+    align: isSystemMessage
+      ? "center"
+      : message.senderProfileId === currentUserId
+        ? "right"
+        : "left",
     createdAt: createdAt.getTime(),
   };
 }
@@ -89,18 +87,134 @@ function mergeMessages(current: ChatMessage[], nextMessage: ChatMessage) {
   return [...deduped, nextMessage].sort((a, b) => a.createdAt - b.createdAt);
 }
 
-function mergePersistedMessages(
-  current: ChatMessage[],
-  nextMessages: ChatMessage[]
+function mergePredictionEntries(
+  current: RoomPredictionEntryRecord[],
+  nextEntry: RoomPredictionEntryRecord
 ) {
-  return nextMessages.reduce(
-    (merged, message) => mergeMessages(merged, message),
-    current
+  const deduped = current.filter((entry) => entry.id !== nextEntry.id);
+  return [...deduped, nextEntry].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 }
 
+function parseClockToSeconds(clock: string) {
+  const [minutesPart, secondsPart] = clock.split(":");
+  const minutes = Number(minutesPart);
+  const seconds = Number(secondsPart);
+
+  if (Number.isNaN(minutes) || Number.isNaN(seconds)) return null;
+  return minutes * 60 + seconds;
+}
+
+function getLatestRoundEntries(
+  entries: RoomPredictionEntryRecord[],
+  round: number,
+  cycleStartMs: number,
+  resolvedAtMs?: number
+) {
+  const latestByUser = new Map<string, RoomPredictionEntryRecord>();
+
+  for (const entry of entries) {
+    if (entry.cycleStartMs !== cycleStartMs || entry.round !== round) continue;
+
+    const createdAt = new Date(entry.createdAt).getTime();
+    if (resolvedAtMs && createdAt > resolvedAtMs) continue;
+
+    latestByUser.set(entry.senderProfileId, entry);
+  }
+
+  return Array.from(latestByUser.values());
+}
+
+function buildPredictionResultText(
+  correctCount: number,
+  result: PredictionOption
+) {
+  if (correctCount === 0) {
+    return `No one guessed correctly. Result: ${result}.`;
+  }
+
+  if (correctCount === 1) {
+    return `1 person guessed correctly. Result: ${result}.`;
+  }
+
+  return `${correctCount} people guessed correctly. Result: ${result}.`;
+}
+
+function buildPredictionLeaderText(
+  predictionEntries: RoomPredictionEntryRecord[],
+  predictionState: MockPredictionState,
+  cycleStartMs: number
+) {
+  if (predictionState.activeRound !== null) return null;
+
+  const scoreboard = new Map<string, { name: string; correct: number }>();
+
+  for (const round of predictionState.resolvedRounds) {
+    const latestEntries = getLatestRoundEntries(
+      predictionEntries,
+      round.round,
+      cycleStartMs,
+      round.resolvedAtMs
+    );
+
+    for (const entry of latestEntries) {
+      if (entry.choice !== round.result) continue;
+
+      const current = scoreboard.get(entry.senderProfileId);
+      scoreboard.set(entry.senderProfileId, {
+        name: entry.senderName,
+        correct: (current?.correct ?? 0) + 1,
+      });
+    }
+  }
+
+  const leaders = [...scoreboard.values()].sort((a, b) => b.correct - a.correct);
+
+  if (leaders.length === 0 || leaders[0].correct === 0) {
+    return "Prediction leader: no correct guesses this match.";
+  }
+
+  const topScore = leaders[0].correct;
+  const topNames = leaders
+    .filter((leader) => leader.correct === topScore)
+    .map((leader) => leader.name);
+
+  if (topNames.length === 1) {
+    return `Top predictor: ${topNames[0]} with ${topScore} correct.`;
+  }
+
+  return `Top predictors: ${topNames.join(", ")} with ${topScore} correct each.`;
+}
+
+function buildPredictionAnnouncements(
+  predictionEntries: RoomPredictionEntryRecord[],
+  predictionState: MockPredictionState,
+  cycleStartMs: number
+): ChatMessage[] {
+  return predictionState.resolvedRounds.map((round) => {
+    const latestEntries = getLatestRoundEntries(
+      predictionEntries,
+      round.round,
+      cycleStartMs,
+      round.resolvedAtMs
+    );
+    const correctCount = latestEntries.filter(
+      (entry) => entry.choice === round.result
+    ).length;
+
+    return {
+      id: `prediction-round-${cycleStartMs}-${round.round}`,
+      sender: "System",
+      text: buildPredictionResultText(correctCount, round.result),
+      time: "",
+      align: "center" as const,
+      createdAt: round.resolvedAtMs + 250,
+    };
+  });
+}
+
 function RoomChat() {
-  const predictionBaseSeconds = 15;
   const { roomId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,21 +225,78 @@ function RoomChat() {
     : state?.room?.id ?? null;
 
   const [room, setRoom] = useState<Room>(state?.room ?? defaultRoom);
+  const [gameState, setGameState] = useState<MockGameSnapshot>(() =>
+    getCurrentMockGameSnapshot()
+  );
   const [draft, setDraft] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [predictionOpen, setPredictionOpen] = useState(true);
-  const [predictionCountdown, setPredictionCountdown] = useState(predictionBaseSeconds);
-  const [selectedPrediction, setSelectedPrediction] = useState<PredictionSelection | null>(null);
-  const [predictionRound, setPredictionRound] = useState(0);
+  const [predictionEntries, setPredictionEntries] = useState<
+    RoomPredictionEntryRecord[]
+  >([]);
   const [currentUserId, setCurrentUserId] = useState("");
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [sendingPrediction, setSendingPrediction] = useState(false);
+  const [leavingRoom, setLeavingRoom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const selectedPredictionRef = useRef<PredictionSelection | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const scoreboard = useMemo(() => scoreSeed(room), [room]);
+  const clockSeconds = parseClockToSeconds(gameState.clock);
+  const isFinalState = gameState.statusLabel === "Final";
+  const isClutchMoment =
+    gameState.quarterLabel === "4th" &&
+    !isFinalState &&
+    clockSeconds !== null &&
+    clockSeconds <= 19;
+  const predictionState = useMemo(
+    () => getMockPredictionState(gameState),
+    [gameState]
+  );
+
+  const currentPredictionEntry = useMemo(() => {
+    if (!currentUserId || predictionState.activeRound === null) return null;
+
+    return getLatestRoundEntries(
+      predictionEntries,
+      predictionState.activeRound,
+      gameState.cycleStartMs
+    ).find((entry) => entry.senderProfileId === currentUserId) ?? null;
+  }, [
+    currentUserId,
+    gameState.cycleStartMs,
+    predictionEntries,
+    predictionState.activeRound,
+  ]);
+
+  const predictionAnnouncements = useMemo(
+    () =>
+      buildPredictionAnnouncements(
+        predictionEntries,
+        predictionState,
+        gameState.cycleStartMs
+      ),
+    [gameState.cycleStartMs, predictionEntries, predictionState]
+  );
+  const finalPredictionLeaderText = useMemo(
+    () =>
+      buildPredictionLeaderText(
+        predictionEntries,
+        predictionState,
+        gameState.cycleStartMs
+      ),
+    [gameState.cycleStartMs, predictionEntries, predictionState]
+  );
+
+  const displayMessages = useMemo(
+    () =>
+      [...messages, ...predictionAnnouncements].sort(
+        (a, b) => a.createdAt - b.createdAt
+      ),
+    [messages, predictionAnnouncements]
+  );
 
   useEffect(() => {
     if (!activeRoomId) {
@@ -144,11 +315,23 @@ function RoomChat() {
 
         setRoom(data.room);
         setCurrentUserId(data.currentUserId);
-        setMessages(
-          data.messages.map((message) =>
-            toDisplayMessage(message, data.currentUserId)
-          )
-        );
+        setMessages([]);
+        setPredictionEntries([]);
+
+        for (const message of data.messages) {
+          const predictionEntry = parseRoomPredictionEntry(message);
+
+          if (predictionEntry) {
+            setPredictionEntries((current) =>
+              mergePredictionEntries(current, predictionEntry)
+            );
+            continue;
+          }
+
+          setMessages((current) =>
+            mergeMessages(current, toDisplayMessage(message, data.currentUserId))
+          );
+        }
       } catch (error) {
         console.error("Error loading room chat:", error);
         setChatError(
@@ -159,66 +342,50 @@ function RoomChat() {
       }
     }
 
-    loadRoomChat();
+    void loadRoomChat();
   }, [activeRoomId]);
 
   useEffect(() => {
+    const unsubscribe = subscribeToMockGameFeed((snapshot) => {
+      setGameState(snapshot);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [displayMessages]);
 
   useEffect(() => {
-    selectedPredictionRef.current = selectedPrediction;
-  }, [selectedPrediction]);
+    if (!actionsOpen) return;
 
-  useEffect(() => {
-    if (!predictionOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        actionsMenuRef.current &&
+        !actionsMenuRef.current.contains(event.target as Node)
+      ) {
+        setActionsOpen(false);
+      }
+    }
 
-    const intervalId = window.setInterval(() => {
-      setPredictionCountdown((current) => (current > 0 ? current - 1 : 0));
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [predictionOpen]);
-
-  useEffect(() => {
-    if (!predictionOpen || predictionCountdown !== 0 || selectedPrediction) return;
-
-    setSelectedPrediction("No Choice");
-    setPredictionOpen(false);
-  }, [predictionCountdown, predictionOpen, selectedPrediction]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      const resolvedPrediction = selectedPredictionRef.current ?? "No Choice";
-      const announcement = buildPredictionAnnouncement(
-        resolvedPrediction,
-        predictionRound
-      );
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: `system-${predictionRound}`,
-          sender: "System",
-          text: announcement.text,
-          time: "",
-          align: "center",
-          createdAt: Date.now(),
-        },
-      ]);
-      setSelectedPrediction(null);
-      setPredictionOpen(true);
-      setPredictionCountdown(predictionBaseSeconds);
-      setPredictionRound((current) => current + 1);
-    }, 30000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [predictionBaseSeconds, predictionRound]);
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsOpen]);
 
   useEffect(() => {
     if (!activeRoomId || !currentUserId) return;
 
     const unsubscribe = subscribeToRoomMessages(activeRoomId, (message) => {
+      const predictionEntry = parseRoomPredictionEntry(message);
+
+      if (predictionEntry) {
+        setPredictionEntries((current) =>
+          mergePredictionEntries(current, predictionEntry)
+        );
+        return;
+      }
+
       setMessages((current) =>
         mergeMessages(current, toDisplayMessage(message, currentUserId))
       );
@@ -238,17 +405,22 @@ function RoomChat() {
         const latestMessages = await fetchRoomMessages(roomIdToSync);
         if (cancelled) return;
 
-        setMessages((current) =>
-          mergePersistedMessages(
-            current,
-            latestMessages.map((message) =>
-              toDisplayMessage(message, currentUserId)
-            )
-          )
-        );
+        for (const message of latestMessages) {
+          const predictionEntry = parseRoomPredictionEntry(message);
+
+          if (predictionEntry) {
+            setPredictionEntries((current) =>
+              mergePredictionEntries(current, predictionEntry)
+            );
+            continue;
+          }
+
+          setMessages((current) =>
+            mergeMessages(current, toDisplayMessage(message, currentUserId))
+          );
+        }
       } catch (error) {
         if (cancelled) return;
-
         console.error("Error syncing room messages:", error);
       }
     }
@@ -287,9 +459,67 @@ function RoomChat() {
     }
   }
 
-  function handlePredictionSelect(prediction: PredictionOption) {
-    setSelectedPrediction(prediction);
-    setPredictionOpen(false);
+  async function handlePredictionSelect(prediction: PredictionOption) {
+    if (
+      !activeRoomId ||
+      predictionState.activeRound === null ||
+      sendingPrediction
+    ) {
+      return;
+    }
+
+    try {
+      setSendingPrediction(true);
+      setChatError(null);
+      const entry = await sendRoomPrediction(
+        activeRoomId,
+        predictionState.activeRound,
+        prediction,
+        gameState.cycleStartMs
+      );
+
+      setPredictionEntries((current) => mergePredictionEntries(current, entry));
+    } catch (error) {
+      console.error("Error sending prediction:", error);
+      setChatError(
+        error instanceof Error ? error.message : "Could not send prediction."
+      );
+    } finally {
+      setSendingPrediction(false);
+    }
+  }
+
+  function handleToggleInfo() {
+    setInfoOpen((current) => !current);
+    setActionsOpen(false);
+  }
+
+  async function handleLeaveRoom() {
+    if (!activeRoomId || leavingRoom) return;
+
+    const confirmed = window.confirm(
+      "Leave this group? It will no longer appear in your rooms list."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLeavingRoom(true);
+      setChatError(null);
+      await leaveRoom(activeRoomId);
+      navigate("/rooms", {
+        replace: true,
+        state: { removedRoomId: activeRoomId },
+      });
+    } catch (error) {
+      console.error("Error leaving room:", error);
+      setChatError(
+        error instanceof Error ? error.message : "Could not leave room."
+      );
+    } finally {
+      setLeavingRoom(false);
+      setActionsOpen(false);
+    }
   }
 
   return (
@@ -316,67 +546,174 @@ function RoomChat() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                aria-label="Toggle match info"
-                onClick={() => setInfoOpen((current) => !current)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/18"
-              >
-                <InformationCircleIcon className="h-5 w-5" />
-              </button>
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  type="button"
+                  aria-label="Room actions"
+                  onClick={() => setActionsOpen((current) => !current)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/18"
+                >
+                  <InformationCircleIcon className="h-5 w-5" />
+                </button>
+
+                {actionsOpen && (
+                  <div className="absolute right-0 top-11 z-20 w-48 rounded-2xl border border-[#d6e0f0] bg-white p-2 shadow-[0_18px_36px_rgba(15,23,42,0.14)]">
+                    <button
+                      type="button"
+                      onClick={handleToggleInfo}
+                      className="flex w-full rounded-xl px-3 py-2 text-left font-lato text-sm font-semibold text-[#29477b] transition-colors hover:bg-[#eef4ff]"
+                    >
+                      {infoOpen ? "Hide Match Info" : "Show Match Info"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLeaveRoom}
+                      disabled={leavingRoom}
+                      className="mt-1 flex w-full rounded-xl px-3 py-2 text-left font-lato text-sm font-semibold text-[#c1124a] transition-colors hover:bg-[#fff1f4] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {leavingRoom ? "Leaving..." : "Leave Group"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="bg-primary px-4 py-3 text-secondary sm:px-5 sm:py-3.5">
+          <div
+            className={`px-4 py-3 sm:px-5 sm:py-3.5 ${
+              isFinalState
+                ? "bg-[#d2d7e1] text-secondary"
+                : isClutchMoment
+                  ? "bg-[linear-gradient(135deg,#a40f2a_0%,#d62d47_52%,#ff5c73_100%)] text-white shadow-[inset_0_-12px_28px_rgba(100,0,14,0.18)]"
+                  : "bg-primary text-secondary"
+            }`}
+          >
             <div className="grid grid-cols-3 items-center">
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
-                  Warriors
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isFinalState
+                      ? "text-secondary/70"
+                      : isClutchMoment
+                        ? "text-white/80"
+                        : "text-secondary/65"
+                  }`}
+                >
+                  {gameState.leftTeam}
                 </p>
                 <p className="font-anton text-[1.75rem] leading-none sm:text-[2.2rem]">
-                  {scoreboard.leftScore}
+                  {gameState.leftScore}
                 </p>
               </div>
 
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
-                  {scoreboard.quarter}
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isFinalState
+                      ? "text-secondary/70"
+                      : isClutchMoment
+                        ? "text-white/80"
+                        : "text-secondary/65"
+                  }`}
+                >
+                  {gameState.quarterLabel}
                 </p>
-                <p className="mt-0.5 font-barlow-condensed text-[1.35rem] font-semibold leading-none sm:text-[1.8rem]">
-                  {scoreboard.time}
+                <p
+                  className={`mt-0.5 font-barlow-condensed font-semibold leading-none sm:text-[1.8rem] ${
+                    isFinalState
+                      ? "text-[1.5rem] text-secondary"
+                      : isClutchMoment
+                        ? "text-[1.6rem] text-white drop-shadow-[0_3px_14px_rgba(255,255,255,0.18)]"
+                        : "text-[1.35rem]"
+                  }`}
+                >
+                  {gameState.clock}
                 </p>
-                <p className="mt-0.5 font-lato text-[0.64rem] font-bold uppercase tracking-[0.18em] text-secondary/70 sm:text-[0.7rem]">
-                  Live
+                <p
+                  className={`mt-0.5 font-lato text-[0.64rem] font-bold uppercase tracking-[0.18em] sm:text-[0.7rem] ${
+                    isFinalState
+                      ? "text-secondary/75"
+                      : isClutchMoment
+                        ? "text-white/85"
+                        : "text-secondary/70"
+                  }`}
+                >
+                  {gameState.statusLabel}
                 </p>
               </div>
 
               <div className="text-center">
-                <p className="font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] text-secondary/65 sm:text-xs">
-                  Lakers
+                <p
+                  className={`font-lato text-[0.68rem] font-bold uppercase tracking-[0.16em] sm:text-xs ${
+                    isFinalState
+                      ? "text-secondary/70"
+                      : isClutchMoment
+                        ? "text-white/80"
+                        : "text-secondary/65"
+                  }`}
+                >
+                  {gameState.rightTeam}
                 </p>
                 <p className="font-anton text-[1.75rem] leading-none sm:text-[2.2rem]">
-                  {scoreboard.rightScore}
+                  {gameState.rightScore}
                 </p>
               </div>
             </div>
+
+            {gameState.detail && !isFinalState && (
+              <div className="mt-2 text-center">
+                <p
+                  className={`font-lato text-[0.68rem] font-semibold sm:text-xs ${
+                    isFinalState
+                      ? "text-secondary/80"
+                      : isClutchMoment
+                        ? "text-white/88"
+                        : "text-secondary/75"
+                  }`}
+                >
+                  {gameState.detail}
+                </p>
+              </div>
+            )}
           </div>
+
+          {isFinalState && finalPredictionLeaderText && (
+            <div className="border-b border-[#d7dfec] bg-[#edf4ff] px-4 py-2.5 sm:px-5">
+              <p className="font-lato text-[0.72rem] font-bold uppercase tracking-[0.16em] text-secondary/55">
+                Winner:
+              </p>
+              <p className="mt-1 font-lato text-sm font-bold text-secondary sm:text-[0.95rem]">
+                {finalPredictionLeaderText.replace(/^Top predictor:\s*/i, "").replace(/^Top predictors:\s*/i, "").replace(/^Prediction leader:\s*/i, "")}
+              </p>
+            </div>
+          )}
 
           {infoOpen && (
             <div className="border-b border-[#d8e2f1] bg-[#2a4e8e] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-5">
               <div className="max-h-[124px] space-y-1.5 overflow-y-auto pr-1">
-                {gameHighlights.map((highlight) => (
-                  <div
-                    key={`${highlight.time}-${highlight.text}`}
-                    className="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-2 rounded-xl bg-[#244887] px-3 py-2"
-                  >
-                    <span className="font-lato text-xs font-bold text-white/88">
-                      {highlight.time}
-                    </span>
-                    <span className="font-lato text-xs text-white sm:text-sm">
-                      {highlight.text}
-                    </span>
+                {gameState.highlights.length > 0 ? (
+                  gameState.highlights.map((highlight) => (
+                    <div
+                      key={`${highlight.time}-${highlight.text}`}
+                      className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-2 rounded-xl bg-[#244887] px-3 py-2"
+                    >
+                      <span className="font-lato text-xs font-bold text-white/88">
+                        {highlight.time}
+                      </span>
+                      <span className="font-lato text-xs text-white sm:text-sm">
+                        {highlight.text}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl bg-[#244887] px-3 py-3">
+                    <p className="font-lato text-xs text-white sm:text-sm">
+                      Tip-off is live. Score updates will start rolling in from the
+                      mock game feed.
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
@@ -388,13 +725,13 @@ function RoomChat() {
                   Loading messages...
                 </p>
               </div>
-            ) : chatError && messages.length === 0 ? (
+            ) : chatError && displayMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <p className="max-w-[28rem] rounded-2xl bg-[#fff1f2] px-4 py-3 text-center font-lato text-sm text-[#be123c]">
                   {chatError}
                 </p>
               </div>
-            ) : messages.length === 0 ? (
+            ) : displayMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <p className="rounded-2xl bg-[#f6f8fc] px-4 py-3 text-center font-lato text-sm text-[#7b8aa2]">
                   No messages yet. Start the conversation.
@@ -402,7 +739,7 @@ function RoomChat() {
               </div>
             ) : (
               <div className="space-y-4">
-                {messages.map((message) => (
+                {displayMessages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${
@@ -454,28 +791,28 @@ function RoomChat() {
           </div>
 
           <div className="sticky bottom-0 border-t border-[#e7edf6] bg-white px-4 py-3 sm:px-5">
-            {chatError && messages.length > 0 && (
+            {chatError && displayMessages.length > 0 && (
               <div className="mb-3 rounded-[1rem] border border-[#ffd7dc] bg-[#fff1f2] px-4 py-3">
                 <p className="font-lato text-sm text-[#be123c]">{chatError}</p>
               </div>
             )}
 
-            {selectedPrediction && (
+            {currentPredictionEntry && (
               <div className="mb-3 rounded-[1rem] border border-[#d5e2f6] bg-[#edf4ff] px-4 py-3 shadow-[0_8px_20px_rgba(30,64,140,0.08)]">
                 <p className="font-lato text-sm font-bold text-secondary sm:text-[0.95rem]">
-                  Prediction: {selectedPrediction}
+                  Prediction: {currentPredictionEntry.choice}
                 </p>
               </div>
             )}
 
-            {predictionOpen && (
+            {predictionState.activeRound !== null && !currentPredictionEntry && (
               <div className="mb-3 overflow-hidden rounded-[1.15rem] border border-[#c7d8f2] bg-[#2d4f8d] shadow-[0_12px_24px_rgba(25,52,102,0.18)]">
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2 text-white">
                   <p className="font-lato text-[0.72rem] font-bold tracking-[0.02em] sm:text-xs">
                     Next Play: What will it be?
                   </p>
                   <span className="rounded-full bg-white/12 px-2 py-1 font-lato text-[0.68rem] font-bold">
-                    {predictionCountdown}s
+                    {predictionState.closesInSeconds ?? 0}s
                   </span>
                 </div>
 
@@ -484,8 +821,9 @@ function RoomChat() {
                     <button
                       key={option}
                       type="button"
-                      onClick={() => handlePredictionSelect(option)}
-                      className="rounded-[0.9rem] bg-white px-2 py-2 font-lato text-[0.78rem] font-bold text-secondary transition-colors hover:bg-[#eef4ff] sm:text-sm"
+                      onClick={() => void handlePredictionSelect(option)}
+                      disabled={sendingPrediction}
+                      className="rounded-[0.9rem] bg-white px-2 py-2 font-lato text-[0.78rem] font-bold text-secondary transition-colors hover:bg-[#eef4ff] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
                     >
                       {option}
                     </button>
@@ -502,7 +840,7 @@ function RoomChat() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    handleSendMessage();
+                    void handleSendMessage();
                   }
                 }}
                 placeholder="Type a message..."
@@ -512,7 +850,7 @@ function RoomChat() {
               <button
                 type="button"
                 aria-label="Send message"
-                onClick={handleSendMessage}
+                onClick={() => void handleSendMessage()}
                 disabled={!activeRoomId || sendingMessage}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#d7e5fb] text-secondary transition-colors hover:bg-[#c6daf8] disabled:cursor-not-allowed disabled:opacity-60"
               >
