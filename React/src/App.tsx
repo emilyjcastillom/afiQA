@@ -3,6 +3,8 @@ import Home from './pages/Home'
 import Fanatic from './pages/Fanatic'
 import Login from './pages/Login'
 import Ranking from './pages/Ranking'
+import Shop from './pages/Shop'
+import ShopProducts from './pages/ShopProducts'
 
 function App() {
 
@@ -12,6 +14,8 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/fanatic" element={<Fanatic />} />
       <Route path="/ranking" element={<Ranking />} />
+      <Route path="/shop" element={<Shop />} />
+      <Route path="/shop/products" element={<ShopProducts />} />
     </Routes>
   );
 }
