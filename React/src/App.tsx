@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Fanatic from './pages/Fanatic'
 import Login from './pages/Login'
+import MyProfile from './pages/MyProfile';
 import Quizzes from "./pages/Quizzes"
 import Rooms from './pages/Rooms/Rooms'
 import CreateRoom from './pages/Rooms/CreateRoom'
@@ -18,6 +19,7 @@ function App() {
       <Route path="/quizzes" element={<Quizzes />} />
       <Route path="/" element={<Home />} />
       <Route path="/fanatic" element={<Fanatic />} />
+      <Route path="/myprofile" element={<MyProfile />} />
       <Route path="/rooms" element={<Rooms />} />
       <Route path="/rooms/create" element={<CreateRoom />} />
       <Route path="/rooms/chat" element={<RoomChat />} />
