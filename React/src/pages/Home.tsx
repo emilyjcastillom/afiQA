@@ -31,7 +31,7 @@ function Home() {
             <div className="max-w-5xl mx-auto px-4 py-8">
 
                 {loading && (
-                    <p className="font-lato text-text-light text-center mt-10">Loading...</p>
+                    <p className="font-lato text-text-light text-center mt-10">Entorno QA</p>
                 )}
 
                 {!loading && (
@@ -40,7 +40,7 @@ function Home() {
                         <div className="w-full md:w-80 shrink-0 flex flex-col gap-4">
 
                             <div>
-                                <p className="font-lato text-text-light text-sm">Welcome back</p>
+                                <p className="font-lato text-text-light text-sm">AFI: Entorno QA</p>
                                 <h1 className="font-lato font-black text-2xl text-text">
                                     @{profile?.username ?? "fan"}
                                 </h1>
