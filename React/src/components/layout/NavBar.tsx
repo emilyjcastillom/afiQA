@@ -13,7 +13,7 @@ export default function NavBar() {
         <>
             <nav className="flex items-center justify-between p-4 bg-secondary text-white">
                 <button onClick={() => navigate("/")} className="cursor-pointer">
-                    <img src="/logo.png" alt="Logo" className="h-10" />
+                    <img src="./logo.png" alt="Logo" className="h-10" />
                 </button>
 
                 <div className="flex items-center gap-5">
