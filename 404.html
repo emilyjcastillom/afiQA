@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script>
+      var path = window.location.pathname;
+      var repo = '/afiQA';
+      var redirect = path.slice(repo.length);
+      sessionStorage.redirect = redirect;
+      window.location.replace(repo + '/?p=' + redirect);
+    </script>
+  </head>
+  <body></body>
+</html>
