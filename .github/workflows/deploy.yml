@@ -23,12 +23,13 @@ jobs:
       - name: Run tests
         working-directory: ./React
         run: npm run test
-        
+
       - name: Build
         working-directory: ./React
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_REDIRECT_URL: ${{ secrets.VITE_REDIRECT_URL }}
         run: npm run build
 
       - name: Deploy to GitHub Pages
