@@ -1,10 +1,12 @@
 import { supabase } from './supabaseClient'
 
+const REDIRECT_URL = import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/`
+
 export async function signInWithGoogle() {
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/afiQA/`,
+      redirectTo: REDIRECT_URL,
     },
   })
 }
