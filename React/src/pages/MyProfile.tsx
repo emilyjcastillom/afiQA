@@ -32,7 +32,7 @@ export default function MyProfile() {
   const handle = user?.username ?? "username";
   const league = getLeague(user?.fanatic_coins ?? 0);
 
-  const [aboutText, setAboutText] = useState<string>("Let us get to know you! Write a short bio about yourself.");
+  const [aboutText, setAboutText] = useState<string>("Let us get to know you! Write a short bio about yourself!");
   useEffect(() => {
     if (user?.caption) {
       setAboutText(user.caption);
