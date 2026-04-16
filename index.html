@@ -8,9 +8,13 @@
     <script>
       (function(){
         var redirect = sessionStorage.redirect;
+        var hash = sessionStorage.hash;
         delete sessionStorage.redirect;
+        delete sessionStorage.hash;
         if (redirect && redirect !== '/') {
-          window.history.replaceState(null, null, redirect);
+          window.history.replaceState(null, null, redirect + (hash || ''));
+        } else if (hash) {
+          window.history.replaceState(null, null, window.location.pathname + hash);
         }
       })();
     </script>
