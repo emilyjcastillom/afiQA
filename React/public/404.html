@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <script>
       var path = window.location.pathname;
+      var hash = window.location.hash;
       var repo = '/afiQA';
       var redirect = path.slice(repo.length);
       sessionStorage.redirect = redirect;
+      sessionStorage.hash = hash;
       window.location.replace(repo + '/?p=' + redirect);
     </script>
   </head>
