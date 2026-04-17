@@ -31,7 +31,7 @@ function Home() {
             <div className="max-w-5xl mx-auto px-4 py-8">
 
                 {loading && (
-                    <p className="font-lato text-text-light text-center mt-10">Entorno QA</p>
+                    <p className="font-lato text-text-light text-center mt-10 text-xl">Entorno QA</p>
                 )}
 
                 {!loading && (
@@ -67,9 +67,9 @@ function Home() {
                             </div>
 
                             <div className="bg-secondary rounded-2xl p-5 text-white">
-                                <p className="font-lato font-black text-lg">Keep it up!</p>
+                                <p className="font-lato font-black text-lg">Bienvenidos al entorno QA</p>
                                 <p className="font-lato text-sm text-surface-light mt-1">
-                                    Continue the momentum with another game
+                                    QA es un ambiente donde se valida que el sistema funciona correctamente antes de llegar a producción. 
                                 </p>
                             </div>
 
